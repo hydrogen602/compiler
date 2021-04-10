@@ -1,9 +1,14 @@
 Let
 ```
-let x = 0 where x in Zahlen (-inf, 5]U[10, 20]
+let x = 0
 ```
 
 Assign
 ```
 a = x
+```
+
+Print
+```
+print x
 ```

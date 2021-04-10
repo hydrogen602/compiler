@@ -25,6 +25,8 @@ tokens :-
   \)                    { \s -> RParens }
   \[                    { \s -> LSqB }
   \]                    { \s -> RSqB }
+  \{                    { \s -> LCurly }
+  \}                    { \s -> RCurly }
   \=                    { \s -> Equals }
   \,                    { \s -> Comma }
   \-                    { \s -> Minus }

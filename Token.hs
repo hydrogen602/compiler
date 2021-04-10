@@ -11,6 +11,8 @@ data Token =
     Where       |
     LParens     |
     RParens     |
+    LCurly      |
+    RCurly      |
     LSqB        |
     RSqB        |
     Comma       |
@@ -18,5 +20,5 @@ data Token =
     Print       |
     Sym Char    |
     Var String  |
-    Integer Integer
+    Integer Int
     deriving (Eq,Show)
