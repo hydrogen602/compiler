@@ -35,9 +35,12 @@ import Token
 Block   : Stmt '\n' Block                          { ($1):($3) }
         | Stmt '\n'                                { [$1] }
 
-Stmt    : let var '=' int                          { LetStmt $2 (Immediate $4) }
-        | var '=' var                              { AssignStmt $1 (Variabl $3) }
-        | print var                                { PrintStmt (Variabl $2) }
+Stmt    : let var '=' Value                          { LetStmt $2 $4 }
+        | var '=' Value                              { AssignStmt $1 $3 }
+        | print Value                                { PrintStmt $2 }
+
+Value   : var                                      { Variabl $1 }
+        | int                                      { Immediate $1 }
 
 {
 parseError :: [Token] -> a

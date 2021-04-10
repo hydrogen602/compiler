@@ -21,6 +21,8 @@ tokens :-
   where                 { \s -> Where }
   U                     { \s -> Union }
   $digit+				        { \s -> Integer (read s) }
+  true                  { \s -> Integer 1 }
+  false                 { \s -> Integer 0 }
   \(                    { \s -> LParens }
   \)                    { \s -> RParens }
   \[                    { \s -> LSqB }
@@ -30,7 +32,7 @@ tokens :-
   \=                    { \s -> Equals }
   \,                    { \s -> Comma }
   \-                    { \s -> Minus }
-  [\+\*\/]			{ \s -> Sym (head s) }
+  [\+\*\/]			        { \s -> Sym (head s) }
   $alpha [$alpha $digit \_ \']*		{ \s -> Var s }
 
 {

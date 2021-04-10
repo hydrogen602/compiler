@@ -4,4 +4,4 @@ y = x
 
 print y
 
-c = x
+print false
