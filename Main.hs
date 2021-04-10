@@ -2,76 +2,92 @@
 import Data.Char
 import Data.List
 import Grammar
+import Asm
+import AST
+
+type VariableTracker = ([(String, String)], [String]) -- variables (registers) & string data labels
 
 
-getRegister :: String -> [(String, String)] -> String 
-getRegister name varTable =
+getRegister :: String -> VariableTracker -> String 
+getRegister name (varTable, _) =
     case lookup name varTable of
         (Just s) -> s
         Nothing -> error $ "Cannot find variable: " ++ name
 
 
-registerAssignHelper :: [Stmt] -> [String] -> [(String, String)]
-registerAssignHelper [] reg = []
-registerAssignHelper ((LetStmt name val):ls) [] = 
+
+registerAssignHelper :: [Stmt] -> [String] -> [String] -> [(String, String)]
+registerAssignHelper [] _ reg = []
+registerAssignHelper ((LetStmt name val):ls) _ [] = 
     error $ "Ran out of registers to assign with var: " ++ name
-registerAssignHelper ((LetStmt name val):ls) (r:reg) = 
-    let others = registerAssignHelper ls reg
-        conflict = any (\(n, _) -> n == name) others
+registerAssignHelper ((LetStmt name val):ls) usedLabels (r:reg) = 
+    let others = registerAssignHelper ls usedLabels reg
+        conflict = any (\(n, _) -> n == name) others || name `elem` usedLabels
 
     in  if conflict then error $ "Variable name \"" ++ name ++ "\" is declared more than once"
         else (name, r):others
-registerAssignHelper (_:ls) reg = registerAssignHelper ls reg
+registerAssignHelper (_:ls) usedLabels reg = registerAssignHelper ls usedLabels reg
 
-registerAssign :: [Stmt] -> [(String, String)]
-registerAssign stmts = registerAssignHelper stmts ["$s0", "$s1", "$s2", "$s3", "$s4", "$s5"]
+registerAssign :: [Stmt] -> [String] -> [(String, String)]
+registerAssign stmts usedLabels = registerAssignHelper stmts usedLabels ["$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7"]
 
 
 
-translate :: Stmt -> [(String, String)] -> String
+translate :: Stmt -> VariableTracker -> [Line]
 translate (LetStmt name val) varTable = 
     let register = getRegister name varTable
-        
-        value = case val of
-            (Variabl v) -> getRegister v varTable
-            (Immediate n) -> show n
-    in "\t\taddi \t" ++ register ++ ", $0, " ++ value
+    in case val of
+            (Variabl v) -> asmSetToRegister register (getRegister v varTable)
+            (Immediate n) -> asmSetToImmediate register n
 
 translate (AssignStmt name val) varTable = 
     let register1 = getRegister name varTable
     in case val of
-            (Variabl v) ->
-                let register2 = getRegister v varTable
-                in "\t\tadd \t" ++ register1 ++ ", $0, " ++ register2
-            (Immediate n2) ->
-                "\t\taddi \t" ++ register1 ++ ", $0, " ++ show n2
+            (Variabl v) -> asmSetToRegister register1 (getRegister v varTable)
+            (Immediate n) -> asmSetToImmediate register1 n
 
-translate (PrintStmt (Variabl name)) varTable = 
-    let register = getRegister name varTable
-    in "\t\tmove \t$a0, " ++ register ++ "\n\t\tli  \t$v0, 1\n\t\tsyscall"
-translate (PrintStmt (Immediate n)) varTable =
-    "\t\tli \t$a0, " ++ show n ++ "\n\t\tli  \t$v0, 1\n\t\tsyscall"
+translate (PrintStmt (Variabl name)) (varTable, labels) = 
+    case lookup name varTable of
+        (Just register) -> asmPrintReg register
+        Nothing -> 
+            if name `elem` labels then asmPrintConstStr name 
+            else error $ "Cannot find variable: " ++ name
+    -- let register = getRegister name varTable
+    -- in asmPrintReg register
+
+translate (PrintStmt (Immediate n)) varTable = asmPrintInt n
+
+--translate (ConstStmt name value) varTable = undefined 
+
+translateData :: [ConstStmt] -> ([AsmData], [String])
+translateData [] = ([], [])
+translateData ((CStmtStr name value):ls)
+    | name == "main" = error "Cannot use label main"
+    | name `elem` labels = error $ "Label already used: " ++ name
+    | otherwise = ((AsmString name value):aData, name:labels)
+    where (aData, labels) = translateData ls
+
 
 main :: IO ()
 main = do
     s <- getContents 
-    
-    let ast = parser (s ++ "\n")
 
-    putStrLn $ show ast
+    let (consts, ast) = parser (s ++ "\n")
+
+    print consts
+    print ast
 
     --let state = evalAST ast (LocalSt [])
 
     --putStrLn (show state)
 
-    let registerTable = registerAssign ast
-    let asm = map (`translate` registerTable) ast
+    let (asmData, dataLabels) = translateData consts
 
-    let header = "\t\t.text\n\t\t.globl  main\nmain:\n\n\t\taddi    $sp, $sp, -4\n\t\tsw      $ra, 0($sp)\n"
-    let footer = "\n\t\tlw      $ra, 0($sp)\n\t\taddi    $sp, $sp, 4\n\t\tjr      $ra\n\t\t.end    main"
+    let registerTable = registerAssign ast dataLabels
+    let asm = concatMap (`translate` (registerTable, dataLabels)) ast
 
-    let out = (header:asm) ++ [footer]
-    
-    putStrLn $ intercalate "\n" out
-    writeFile "out.s" $ intercalate "\n" out
+    let out = generateText (asm, asmData)
+
+    putStrLn out
+    writeFile "out.s" out
 

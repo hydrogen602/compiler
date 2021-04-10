@@ -17,8 +17,11 @@ data Token =
     RSqB        |
     Comma       |
     Minus       |
+    Plus        |
     Print       |
+    Const       |
     Sym Char    |
     Var String  |
-    Integer Int
+    Integer Int |
+    Str String
     deriving (Eq,Show)

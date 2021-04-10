@@ -1,6 +1,7 @@
 {
 module Lexer (lexThis) where
 
+import Data.Char
 import Token
 }
 
@@ -15,14 +16,16 @@ tokens :-
   $white+				        ;
   "--".*				        ;
   let					          { \s -> Let }
+  const                 { \s -> Const }
   in					          { \s -> In }
   print                 { \s -> Print }
   inf                   { \s -> Infinity }
   where                 { \s -> Where }
   U                     { \s -> Union }
-  $digit+				        { \s -> Integer (read s) }
+  "-"?$digit+				        { \s -> Integer (read s) }
   true                  { \s -> Integer 1 }
   false                 { \s -> Integer 0 }
+  \"[^\"]*\"            { strHelper }
   \(                    { \s -> LParens }
   \)                    { \s -> RParens }
   \[                    { \s -> LSqB }
@@ -32,8 +35,9 @@ tokens :-
   \=                    { \s -> Equals }
   \,                    { \s -> Comma }
   \-                    { \s -> Minus }
-  [\+\*\/]			        { \s -> Sym (head s) }
-  $alpha [$alpha $digit \_ \']*		{ \s -> Var s }
+  \+                    { \s -> Plus }
+  [\*\/]			        { \s -> Sym (head s) }
+  $alpha [$alpha $digit \_]*		{ \s -> Var s }
 
 {
 
@@ -41,6 +45,18 @@ tokens :-
 
 -- let n = 0 where n \in Zahlen with (-\inf, 5]U(7,9)
 
+strHelper :: String -> Token
+strHelper ('\"':sTmp) = 
+  let s = init sTmp
+--      helper "" = ""
+--      helper ('\\':'n':ls) = '\n':(helper ls)
+--      helper ('\\':'t':ls) = '\t':(helper ls)
+--      helper ('\\':'r':ls) = '\r':(helper ls)
+--      helper ('\\':'\\':ls) = '\\':(helper ls)
+--      helper ('\\':c:ls) = error $ "Found escape seq: \\" ++ [c] ++ " but can't understand that"
+--      helper (s:ls) = s:(helper ls)
+
+  in Str s --(helper s)
 
 -- main = do
 --   s <- getContents

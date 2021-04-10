@@ -1,9 +1,10 @@
 {
-module Grammar (parser, Stmt(..), G_Value(..)) where
+module Grammar (parser, Stmt(..), Expr(..)) where
 
 import Data.Char
 import Lexer
 import Token
+import AST
 }
 
 %name calc
@@ -12,6 +13,7 @@ import Token
 
 %token 
       let             { Let }
+      const           { Const }
       in              { In }
       int             { Integer $$ }
       var             { Var $$ }
@@ -19,6 +21,7 @@ import Token
       inf             { Infinity }
       U               { Union }
       print           { Print }
+      str             { Str $$ }
 
       '\n'            { NewLine }
       ')'             { RParens }
@@ -30,14 +33,23 @@ import Token
       '}'             { RCurly }
       ','             { Comma }
       '-'             { Minus }
+      '+'             { Plus }
 %%
+
+Start   : CStmt '\n' Start                         { startHelper ($1) ($3) }
+        | Block                                    { ([], ($1)) }
+
+CStmt   : const var '=' str                        { CStmtStr $2 $4 }
 
 Block   : Stmt '\n' Block                          { ($1):($3) }
         | Stmt '\n'                                { [$1] }
 
-Stmt    : let var '=' Value                          { LetStmt $2 $4 }
-        | var '=' Value                              { AssignStmt $1 $3 }
-        | print Value                                { PrintStmt $2 }
+Stmt    : let var '=' Expr                         { LetStmt $2 $4 }
+        | var '=' Expr                             { AssignStmt $1 $3 }
+        | print Expr                               { PrintStmt $2 }
+
+Expr    : Value '+' Expr                           { ExprPlus $1 $3 }
+        | Value                                    { $1 }
 
 Value   : var                                      { Variabl $1 }
         | int                                      { Immediate $1 }
@@ -46,14 +58,9 @@ Value   : var                                      { Variabl $1 }
 parseError :: [Token] -> a
 parseError tok = error $ "Parse error " ++ show tok
 
-data Stmt = 
-        LetStmt String G_Value
-      | AssignStmt String G_Value
-      | PrintStmt G_Value
-      deriving Show
-
-data G_Value = Variabl String | Immediate Int deriving Show
-
-parser :: String -> [Stmt]
+parser :: String -> AST
 parser s = calc $ lexThis s
+
+startHelper :: ConstStmt -> AST -> AST
+startHelper c (consts, stmts) = (c:consts, stmts)
 }

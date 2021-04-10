@@ -1,7 +1,11 @@
+const nl = "\n"
+
 let x = 5
 let y = 0
-y = x
+y = x + 3
 
 print y
+print nl
 
-print false
+print -2
+print nl
