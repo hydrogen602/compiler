@@ -1,0 +1,7 @@
+let x = 5 where x in Zahlen [4, 10]U[12, 14]
+
+let y = 0 where y in Zahlen (-inf, 15]
+
+y = x
+
+print y
