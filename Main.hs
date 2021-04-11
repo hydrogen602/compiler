@@ -4,6 +4,7 @@ import Data.List
 import Grammar
 import Asm
 import AST
+import Util
 
 type VariableTracker = ([(String, String)], [String]) -- variables (registers) & string data labels
 
@@ -35,16 +36,31 @@ registerAssign stmts usedLabels = registerAssignHelper stmts usedLabels ["$s0", 
 
 expressionEvalHelper :: Int -> Expr -> VariableTracker -> ([Line], String) -- returns lines and register where result is
 expressionEvalHelper n (Variabl s) varTable = 
-    let register1 = "$t" ++ if n >= 0 && n < 10 then show n else error "Ran out of temporary registers"
+    let register1 = generateTmpReg n
         register2 = getRegister s varTable
         code = asmSetToRegister register1 register2
     in (code, register1)
+
 expressionEvalHelper n (Immediate v) varTable = 
-    let register = "$t" ++ if n >= 0 && n < 10 then show n else error "Ran out of temporary registers"
+    let register = generateTmpReg n
         code = asmSetToImmediate register v
     in (code, register)
+
+expressionEvalHelper n (ExprPlus (Variabl s) e) varTable =
+    let regOut = generateTmpReg n
+        register = getRegister s varTable
+        (code, reg) = expressionEvalHelper (n+1) e varTable
+        codeAdd = asmAddRegisters regOut register reg
+    in (code ++ codeAdd, regOut)
+
+expressionEvalHelper n (ExprPlus (Immediate v) e) varTable =
+    let
+        (code, reg) = expressionEvalHelper n e varTable
+        codeAdd = asmAddImmediate reg reg v
+    in  (code ++ codeAdd, reg)
+
 expressionEvalHelper n (ExprPlus e1 e2) varTable = 
-    let register = "$t" ++ if n >= 0 && n < 10 then show n else error "Ran out of temporary registers"
+    let register = generateTmpReg n
         (code1, reg1) = expressionEvalHelper (n+1) e1 varTable
         set1 = asmSetToRegister register reg1
         (code2, reg2) = expressionEvalHelper (n+1) e2 varTable

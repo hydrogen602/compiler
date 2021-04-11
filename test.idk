@@ -1,15 +1,15 @@
 const nl = "\n"
---const hi = "Hello World!"
+const hi = "Hello World!"
 
 let x = 5
 let y = 0
-y = x + 2
+y = x + 2 + -1
 
 print y
 print nl
 
---print -2
---print nl
+print -2
+print nl
 
---print hi
---print nl
+print hi
+print nl
