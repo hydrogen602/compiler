@@ -33,18 +33,51 @@ registerAssign stmts usedLabels = registerAssignHelper stmts usedLabels ["$s0", 
 
 
 
+expressionEvalHelper :: Int -> Expr -> VariableTracker -> ([Line], String) -- returns lines and register where result is
+expressionEvalHelper n (Variabl s) varTable = 
+    let register1 = "$t" ++ if n >= 0 && n < 10 then show n else error "Ran out of temporary registers"
+        register2 = getRegister s varTable
+        code = asmSetToRegister register1 register2
+    in (code, register1)
+expressionEvalHelper n (Immediate v) varTable = 
+    let register = "$t" ++ if n >= 0 && n < 10 then show n else error "Ran out of temporary registers"
+        code = asmSetToImmediate register v
+    in (code, register)
+expressionEvalHelper n (ExprPlus e1 e2) varTable = 
+    let register = "$t" ++ if n >= 0 && n < 10 then show n else error "Ran out of temporary registers"
+        (code1, reg1) = expressionEvalHelper (n+1) e1 varTable
+        set1 = asmSetToRegister register reg1
+        (code2, reg2) = expressionEvalHelper (n+1) e2 varTable
+        set2 = asmAddRegisters register register reg2
+    in (concat [code1, set1, code2, set2], register)
+
+
+
+expressionEval :: Expr -> VariableTracker -> ([Line], String)
+expressionEval = expressionEvalHelper 0
+
+
+
 translate :: Stmt -> VariableTracker -> [Line]
 translate (LetStmt name val) varTable = 
     let register = getRegister name varTable
     in case val of
             (Variabl v) -> asmSetToRegister register (getRegister v varTable)
             (Immediate n) -> asmSetToImmediate register n
+            expr@(ExprPlus e1 e2) -> 
+                let (code, reg) = expressionEval expr varTable
+                    moveCode = asmSetToRegister register reg
+                in code ++ moveCode
 
 translate (AssignStmt name val) varTable = 
     let register1 = getRegister name varTable
     in case val of
             (Variabl v) -> asmSetToRegister register1 (getRegister v varTable)
             (Immediate n) -> asmSetToImmediate register1 n
+            expr@(ExprPlus e1 e2) -> 
+                let (code, reg) = expressionEval expr varTable
+                    moveCode = asmSetToRegister register1 reg
+                in code ++ moveCode
 
 translate (PrintStmt (Variabl name)) (varTable, labels) = 
     case lookup name varTable of

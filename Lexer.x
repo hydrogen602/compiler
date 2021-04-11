@@ -7,14 +7,14 @@ import Token
 
 %wrapper "basic"
 
-$digit = 0-9			-- digits
+$digit = 0-9		  	-- digits
 $alpha = [a-zA-Z]		-- alphabetic characters
 
 tokens :-
 
   \n$white*             { \s -> NewLine }
   $white+				        ;
-  "--".*				        ;
+  "--".*\n*				      ;
   let					          { \s -> Let }
   const                 { \s -> Const }
   in					          { \s -> In }
@@ -22,7 +22,7 @@ tokens :-
   inf                   { \s -> Infinity }
   where                 { \s -> Where }
   U                     { \s -> Union }
-  "-"?$digit+				        { \s -> Integer (read s) }
+  "-"?$digit+				    { \s -> Integer (read s) }
   true                  { \s -> Integer 1 }
   false                 { \s -> Integer 0 }
   \"[^\"]*\"            { strHelper }
