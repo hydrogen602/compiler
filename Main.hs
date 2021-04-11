@@ -47,25 +47,21 @@ expressionEvalHelper n (Immediate v) varTable =
     in (code, register)
 
 expressionEvalHelper n (ExprPlus (Variabl s) e) varTable =
-    let regOut = generateTmpReg n
-        register = getRegister s varTable
-        (code, reg) = expressionEvalHelper (n+1) e varTable
-        codeAdd = asmAddRegisters regOut register reg
-    in (code ++ codeAdd, regOut)
+    let register = getRegister s varTable
+        (code, reg) = expressionEvalHelper n e varTable
+        codeAdd = asmAddRegisters reg register reg
+    in (code ++ codeAdd, reg)
 
 expressionEvalHelper n (ExprPlus (Immediate v) e) varTable =
-    let
-        (code, reg) = expressionEvalHelper n e varTable
+    let (code, reg) = expressionEvalHelper n e varTable
         codeAdd = asmAddImmediate reg reg v
     in  (code ++ codeAdd, reg)
 
 expressionEvalHelper n (ExprPlus e1 e2) varTable = 
-    let register = generateTmpReg n
-        (code1, reg1) = expressionEvalHelper (n+1) e1 varTable
-        set1 = asmSetToRegister register reg1
+    let (code1, reg1) = expressionEvalHelper n e1 varTable
         (code2, reg2) = expressionEvalHelper (n+1) e2 varTable
-        set2 = asmAddRegisters register register reg2
-    in (concat [code1, set1, code2, set2], register)
+        set2 = asmAddRegisters reg1 reg1 reg2
+    in (concat [code1, code2, set2], reg1)
 
 
 
