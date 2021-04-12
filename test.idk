@@ -11,5 +11,7 @@ if c {
     println hi
 }
 
+--if y {
 print yIs
 println y
+--}

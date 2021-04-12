@@ -1,5 +1,6 @@
 module Util where
 import Data
+import Data.List
 
 generateTmpReg :: Int -> String 
 generateTmpReg n = "$t" ++ if n >= 0 && n < 10 then show n else error "Ran out of temporary registers"
@@ -25,3 +26,17 @@ printNewLineCall = [Instruction "jal" [printLabel]]
 
 unpackLs1 :: [a] -> a
 unpackLs1 [x] = x
+
+-- containsSubList :: (Eq a) => [a] -> [a] -> Bool 
+-- containsSubList [] _ = True
+-- containsSubList _ [] = False 
+-- containsSubList pre ls
+--     | pre `isPrefixOf` ls = True 
+--     | otherwise = containsSubList pre (tail ls)
+
+argumentExtract :: String -> [String] -> Maybe String
+argumentExtract _ [] = Nothing 
+argumentExtract _ [_] = Nothing 
+argumentExtract name (e:arg:args)
+    | name == e = Just arg 
+    | otherwise = argumentExtract name args
