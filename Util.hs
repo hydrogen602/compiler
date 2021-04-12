@@ -4,6 +4,9 @@ import Data
 generateTmpReg :: Int -> String 
 generateTmpReg n = "$t" ++ if n >= 0 && n < 10 then show n else error "Ran out of temporary registers"
 
+tmpRegs :: [String]
+tmpRegs = map (\n -> "$t" ++ show n) [0..9]
+
 printLabel :: String
 printLabel = "_printLn"
 
