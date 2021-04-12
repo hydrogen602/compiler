@@ -6,3 +6,6 @@ Main
 Lexer.hs
 Grammar.hs
 out*
+
+# Test stuff
+tests/tmp.s
