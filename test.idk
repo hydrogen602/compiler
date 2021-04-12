@@ -5,7 +5,11 @@ let x = 5
 let y = 0
 y = x + 2 + -1
 
-println hi
+let c = 1
+
+if c {
+    println hi
+}
 
 print yIs
 println y

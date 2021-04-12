@@ -18,6 +18,7 @@ tokens :-
   let					          { \s -> Let }
   const                 { \s -> Const }
   in					          { \s -> In }
+  if                    { \s -> If }
   println               { \s -> Print True }
   print                 { \s -> Print False }
   inf                   { \s -> Infinity }
@@ -31,7 +32,7 @@ tokens :-
   \)                    { \s -> RParens }
   \[                    { \s -> LSqB }
   \]                    { \s -> RSqB }
-  \{                    { \s -> LCurly }
+  \{$white*\n*          { \s -> LCurly }
   \}                    { \s -> RCurly }
   \=                    { \s -> Equals }
   \,                    { \s -> Comma }

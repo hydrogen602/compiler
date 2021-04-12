@@ -5,6 +5,7 @@ data Token =
     NewLine     |
     Let         |
     In          |
+    If          |
     Equals      |
     Infinity    |
     Union       |

@@ -15,6 +15,7 @@ import AST
       let             { Let }
       const           { Const }
       in              { In }
+      if              { If }
       int             { Integer $$ }
       var             { Var $$ }
       where           { Where }
@@ -49,6 +50,7 @@ Stmt    : let var '=' Expr                         { LetStmt $2 $4 }
         | var '=' Expr                             { AssignStmt $1 $3 }
         | println Expr                             { PrintStmt True $2 }
         | print Expr                               { PrintStmt False $2 }
+        | if var '{' Block '}'                     { IfStmt $2 $4 }
 
 Expr    : Value '+' Expr                           { ExprPlus $1 $3 }
         | Value                                    { $1 }

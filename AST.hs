@@ -4,6 +4,7 @@ data Stmt =
         LetStmt String Expr
       | AssignStmt String Expr
       | PrintStmt Bool Expr
+      | IfStmt String [Stmt]
       deriving Show
 
 data ConstStmt =
