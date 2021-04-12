@@ -5,6 +5,7 @@ import Grammar
 import Asm
 import AST
 import Util
+import Data
 
 type VariableTracker = ([(String, String)], [String]) -- variables (registers) & string data labels
 
@@ -91,16 +92,17 @@ translate (AssignStmt name val) varTable =
                     moveCode = asmSetToRegister register1 reg
                 in code ++ moveCode
 
-translate (PrintStmt (Variabl name)) (varTable, labels) = 
-    case lookup name varTable of
+translate (PrintStmt withNL (Variabl name)) (varTable, labels) = 
+    (case lookup name varTable of
         (Just register) -> asmPrintReg register
         Nothing -> 
             if name `elem` labels then asmPrintConstStr name 
             else error $ "Cannot find variable: " ++ name
-    -- let register = getRegister name varTable
-    -- in asmPrintReg register
 
-translate (PrintStmt (Immediate n)) varTable = asmPrintInt n
+    ) ++ if withNL then printNewLineCall else [] 
+
+
+translate (PrintStmt withNL (Immediate n)) varTable = asmPrintInt n ++ if withNL then printNewLineCall else []
 
 --translate (ConstStmt name value) varTable = undefined 
 
@@ -133,6 +135,6 @@ main = do
 
     let out = generateText (asm, asmData)
 
-    putStrLn out
+    --putStrLn out
     writeFile "out.s" out
 

@@ -3,7 +3,7 @@ module AST where
 data Stmt = 
         LetStmt String Expr
       | AssignStmt String Expr
-      | PrintStmt Expr
+      | PrintStmt Bool Expr
       deriving Show
 
 data ConstStmt =

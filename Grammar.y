@@ -20,7 +20,8 @@ import AST
       where           { Where }
       inf             { Infinity }
       U               { Union }
-      print           { Print }
+      println         { Print True }
+      print           { Print False }
       str             { Str $$ }
 
       '\n'            { NewLine }
@@ -46,7 +47,8 @@ Block   : Stmt '\n' Block                          { ($1):($3) }
 
 Stmt    : let var '=' Expr                         { LetStmt $2 $4 }
         | var '=' Expr                             { AssignStmt $1 $3 }
-        | print Expr                               { PrintStmt $2 }
+        | println Expr                             { PrintStmt True $2 }
+        | print Expr                               { PrintStmt False $2 }
 
 Expr    : Value '+' Expr                           { ExprPlus $1 $3 }
         | Value                                    { $1 }

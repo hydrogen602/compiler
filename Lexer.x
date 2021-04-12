@@ -18,7 +18,8 @@ tokens :-
   let					          { \s -> Let }
   const                 { \s -> Const }
   in					          { \s -> In }
-  print                 { \s -> Print }
+  println               { \s -> Print True }
+  print                 { \s -> Print False }
   inf                   { \s -> Infinity }
   where                 { \s -> Where }
   U                     { \s -> Union }

@@ -18,7 +18,7 @@ data Token =
     Comma       |
     Minus       |
     Plus        |
-    Print       |
+    Print Bool  |
     Const       |
     Sym Char    |
     Var String  |

@@ -1,4 +1,4 @@
-module Asm (Line(..), AsmData(..), ASM, 
+module Asm ( 
     generateText, asmPrintInt, asmPrintReg, 
     asmSetToRegister, asmSetToImmediate, asmPrintConstStr, 
     asmAddRegisters, asmAddImmediate
@@ -6,16 +6,9 @@ module Asm (Line(..), AsmData(..), ASM,
 
 import Data.List
 import AST
+import Data
+import Util
 
-data Line =
-      Instruction String [String] -- command, args
-    | Label String
-    | EmptyLine
-
-data AsmData =
-    AsmString String String -- label, data
-
-type ASM = ([Line], [AsmData])
 
 generateDataLine :: AsmData -> String
 generateDataLine (AsmString name value) = 
@@ -51,14 +44,15 @@ footer = [
     Instruction "lw" ["$ra", "0($sp)"],
     Instruction "addi" ["$sp", "$sp", "4"],
     Instruction "jr" ["$ra"],
-    Instruction ".end" ["main"],
-    EmptyLine,
-    Instruction ".data" []
+    Instruction ".end" ["main"]
     ]
 
 generateText :: ASM -> String
 generateText (lines, aData) =
-    let allLines = header ++ lines ++ footer
+    let includePrintNL = elem (unpackLs1 printNewLineCall) lines
+        includes = if includePrintNL then printNewLineCode else []
+
+        allLines = header ++ lines ++ footer ++ includes ++ [EmptyLine, Instruction ".data" []]
         text = intercalate "\n" (map generateLine allLines)
         textData = intercalate "\n" (map generateDataLine aData)
 
@@ -76,7 +70,7 @@ asmPrintInt n = [
     Instruction "li" ["$a0", show n],
     Instruction "li" ["$v0", "1"],
     Instruction "syscall" []
-    ] 
+    ]
 
 asmPrintConstStr :: String -> [Line]
 asmPrintConstStr label = [

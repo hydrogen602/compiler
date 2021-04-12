@@ -9,6 +9,6 @@ import Asm
 --     | otherwise = this:optimize (next:ls)
 -- optimize (this:ls) = this:optimize ls
 
-optimize :: [Line] -> [Line]
-optimize [] = []
-optimize ls = ls
+-- optimize :: [Line] -> [Line]
+-- optimize [] = []
+-- optimize ls = ls
