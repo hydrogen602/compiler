@@ -18,7 +18,7 @@ cases = set(t[:t.index('.')] for t in os.listdir(casesPath) if not t.startswith(
 def case_helper(test):
     pathToCase = os.path.join(casesPath, test)
 
-    compileResult = subprocess.run(['./Main', '-i', pathToCase + '.idk', '-o', 'tests/tmp.s'], capture_output=True)
+    compileResult = subprocess.run(['./Main', '-i', pathToCase + '.idk', '-o', f'tests/out/{test}.s'], capture_output=True)
 
     if test.startswith('fail'):
         assert compileResult.returncode != 0 # invalid code should fail
@@ -27,7 +27,7 @@ def case_helper(test):
         if compileResult != 0: print(test, cases)
         compileResult.check_returncode()
 
-        result = subprocess.run(['spim', '-file', 'tests/tmp.s'], capture_output=True)
+        result = subprocess.run(['spim', '-file', f'tests/out/{test}.s'], capture_output=True)
         result.check_returncode()
 
         output = result.stdout.decode().split('Loaded: /usr/lib/spim/exceptions.s\n', maxsplit=1)[1]

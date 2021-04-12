@@ -9,3 +9,4 @@ out*
 
 # Test stuff
 tests/tmp.s
+**/__pycache__
