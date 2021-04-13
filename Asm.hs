@@ -63,7 +63,7 @@ asmPrintReg register = [
     Instruction "move" ["$a0", register],
     Instruction "li" ["$v0", "1"],
     Instruction "syscall" []
-    ] 
+    ]
 
 asmPrintInt :: Int -> [Line]
 asmPrintInt n = [
@@ -77,7 +77,7 @@ asmPrintConstStr label = [
     Instruction "la" ["$a0", label],
     Instruction "li" ["$v0", "4"],
     Instruction "syscall" []
-    ] 
+    ]
 
 asmSetToRegister :: String -> String -> [Line]
 asmSetToRegister r1 r2 = [Instruction "move" [r1, r2]]

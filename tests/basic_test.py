@@ -12,7 +12,7 @@ def compile(request):
 thisPath = sys.path[0]
 casesPath = os.path.join((thisPath), 'cases')
 
-cases = set(t[:t.index('.')] for t in os.listdir(casesPath) if not t.startswith('.'))
+cases = set(t[:t.index('.')] for t in os.listdir(casesPath) if t.endswith('.idk'))
 
 
 def case_helper(test):
