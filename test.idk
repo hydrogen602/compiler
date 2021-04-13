@@ -7,7 +7,7 @@ const hi = "Hello World!"
 
 let c = 1
 
-if -1 + c {
+if c + -1 {
     println hi
 }
 println c
