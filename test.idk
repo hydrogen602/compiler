@@ -1,17 +1,18 @@
 const hi = "Hello World!"
-const yIs = "y = "
+--const yIs = "y = "
 
-let x = 5
-let y = 0
-y = x + 2 + -1
+--let x = 5
+--let y = 0
+--y = x + 2 + -1
 
 let c = 1
 
 if -1 + c {
     println hi
 }
+println c
 
 --if y {
-print yIs
-println y
+--print yIs
+--println y
 --}

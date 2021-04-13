@@ -42,28 +42,31 @@ import Debug.Trace
 
 
 expressionEvalHelper :: [TmpReg] -> Expr -> VariableTracker -> ([Line], String) -- returns lines and register where result is
-expressionEvalHelper (register1:_) (Variabl s) varTable = 
-    --([], getRegister s varTable)
-    let register2 = getRegister s varTable
-        code = asmSetToRegister register1 register2
-    in (code, register1)
+expressionEvalHelper _ (Variabl s) varTable = 
+    ([], getRegister s varTable)
+    -- let register2 = getRegister s varTable
+    --     code = asmSetToRegister register1 register2
+    -- in (code, register1)
 
 expressionEvalHelper (register:_) (Immediate v) varTable = 
     let code = asmSetToImmediate register v
     in (code, register)
 
-expressionEvalHelper tmpRegLs (ExprPlus (Variabl s) e) varTable =
+expressionEvalHelper tmpRegLs (ExprPlus (Variabl s) e) varTable = -- trace s $
     let register = getRegister s varTable
         (code, reg) = expressionEvalHelper tmpRegLs e varTable
         codeAdd = asmAddRegisters reg register reg
     in (code ++ codeAdd, reg)
 
-expressionEvalHelper tmpRegLs (ExprPlus (Immediate v) e) varTable =
+expressionEvalHelper tmpRegLs@(tmp:_) (ExprPlus (Immediate v) e) varTable = --trace ("immediate = " ++ show v) $
     let (code, reg) = expressionEvalHelper tmpRegLs e varTable
-        codeAdd = asmAddImmediate reg reg v
-    in  (code ++ codeAdd, reg)
+        (codeAdd, regOut) = if reg == tmp then
+            (asmAddImmediate reg reg v, reg)
+        else
+            (asmAddImmediate tmp reg v, tmp)
+    in  (code ++ codeAdd, regOut)
 
-expressionEvalHelper (tmpReg:tmpRegLs) (ExprPlus e1 e2) varTable = 
+expressionEvalHelper (tmpReg:tmpRegLs) (ExprPlus e1 e2) varTable = --trace "general expr eval helper" $
     let (code1, reg1) = expressionEvalHelper (tmpReg:tmpRegLs) e1 varTable
         (code2, reg2) = expressionEvalHelper tmpRegLs e2 varTable
         set2 = asmAddRegisters reg1 reg1 reg2
