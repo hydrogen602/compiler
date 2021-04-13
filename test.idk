@@ -1,5 +1,6 @@
 const hi = "Hello World!"
 --const yIs = "y = "
+const elseBlock = "else block!"
 
 --let x = 5
 --let y = 0
@@ -7,8 +8,13 @@ const hi = "Hello World!"
 
 let c = 1
 
-if c + -1 {
+if c + -1 
+{
     println hi
+}
+else 
+{
+    println elseBlock
 }
 println c
 

@@ -45,3 +45,9 @@ getRegister name varTable =
     case getRegisterMaybe name varTable of
         (Just s) -> s
         Nothing -> error $ "Cannot find variable: " ++ name
+
+setIfLabelNum :: VariableTracker -> Int -> VariableTracker
+setIfLabelNum (assignments, dataLabels, _) newIfLabelId = (assignments, dataLabels, newIfLabelId)
+
+updateIfLabelNum :: VariableTracker -> Int -> VariableTracker
+updateIfLabelNum (assignments, dataLabels, ifLabelId) n = (assignments, dataLabels, ifLabelId + n)

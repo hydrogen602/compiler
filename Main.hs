@@ -111,23 +111,24 @@ translate (PrintStmt withNL (Variabl name)) varTable@(vars, labels, _) =
 
 translate (PrintStmt withNL (Immediate n)) varTable = (asmPrintInt n ++ if withNL then printNewLineCall else [], varTable)
 
-translate (IfStmt expr block) (vars, stringLabels, ifLabelNum) = 
-    let varTable = (vars, stringLabels, ifLabelNum + 1)
+translate (IfStmt expr block []) varTable@(vars, stringLabels, ifLabelNum) = 
+    let ifEndLabel = "if_end_" ++ show ifLabelNum
 
-        (conditionCode, conditionReg) = expressionEval expr varTable
+        newVarTable = (updateIfLabelNum varTable 1)
 
-        (innerBlock, varTableNew) = translator block varTable
-        ifLabel = "if_end_" ++ show ifLabelNum
+        (conditionCode, conditionReg) = expressionEval expr newVarTable
 
-        preCode = [
-            Instruction "beq" [conditionReg, "$0", ifLabel]
-            ]
+        (innerBlock, (_, _, ifLabelNumNew)) = translator block newVarTable
+        
+
+        preCode = EmptyLine:conditionCode ++ [Instruction "beq" [conditionReg, "$0", ifEndLabel]]
         postCode = [
             EmptyLine,
-            Label ifLabel
+            Label ifEndLabel
             ]
-    in (EmptyLine:conditionCode ++ preCode ++ innerBlock ++ postCode, varTable) -- not passing varTableNew because scope
-
+        
+        updatedVarTable = setIfLabelNum varTable ifLabelNumNew -- we don't keep var data because scope - but if ids are global
+    in (preCode ++ innerBlock ++ postCode, updatedVarTable)
 
 
 translator :: [Stmt] -> VariableTracker -> ([Line], VariableTracker)
@@ -138,8 +139,6 @@ translator (st:ls) varTable = --traceShow st $
     in (code ++ codeLater, varTableLater)
 
 
-
---translate (ConstStmt name value) varTable = undefined 
 
 translateData :: [ConstStmt] -> ([AsmData], [String])
 translateData [] = ([], [])

@@ -9,16 +9,18 @@ import Token
 
 $digit = 0-9		  	-- digits
 $alpha = [a-zA-Z]		-- alphabetic characters
+$notv = [^$alpha $digit \_] -- not var characters
 
 tokens :-
 
   \n$white*             { \s -> NewLine }
   $white+				        ;
   "--".*\n*				      ;
-  let					          { \s -> Let }
-  const                 { \s -> Const }
-  in					          { \s -> In }
-  if                    { \s -> If }
+  let$notv              { \s -> Let }
+  const$notv            { \s -> Const }
+  in$notv	              { \s -> In }
+  if$notv               { \s -> If }
+  \n*else$notv          { \s -> Else }
   println               { \s -> Print True }
   print                 { \s -> Print False }
   inf                   { \s -> Infinity }
@@ -32,7 +34,7 @@ tokens :-
   \)                    { \s -> RParens }
   \[                    { \s -> LSqB }
   \]                    { \s -> RSqB }
-  \{$white*\n*          { \s -> LCurly }
+  \n*\{$white*\n*       { \s -> LCurly }
   \}                    { \s -> RCurly }
   \=                    { \s -> Equals }
   \,                    { \s -> Comma }

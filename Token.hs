@@ -6,6 +6,7 @@ data Token =
     Let         |
     In          |
     If          |
+    Else        |
     Equals      |
     Infinity    |
     Union       |
