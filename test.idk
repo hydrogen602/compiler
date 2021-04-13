@@ -7,7 +7,7 @@ y = x + 2 + -1
 
 let c = 1
 
-if c {
+if -1 + c {
     println hi
 }
 

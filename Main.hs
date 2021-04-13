@@ -43,6 +43,7 @@ import Debug.Trace
 
 expressionEvalHelper :: [TmpReg] -> Expr -> VariableTracker -> ([Line], String) -- returns lines and register where result is
 expressionEvalHelper (register1:_) (Variabl s) varTable = 
+    --([], getRegister s varTable)
     let register2 = getRegister s varTable
         code = asmSetToRegister register1 register2
     in (code, register1)
@@ -109,21 +110,22 @@ translate (PrintStmt withNL (Variabl name)) varTable@(vars, labels, _) =
 
 translate (PrintStmt withNL (Immediate n)) varTable = (asmPrintInt n ++ if withNL then printNewLineCall else [], varTable)
 
-translate (IfStmt condition block) (vars, stringLabels, ifLabelNum) = 
+translate (IfStmt expr block) (vars, stringLabels, ifLabelNum) = 
     let varTable = (vars, stringLabels, ifLabelNum + 1)
+
+        (conditionCode, conditionReg) = expressionEval expr varTable
 
         (innerBlock, varTableNew) = translator block varTable
         ifLabel = "if_end_" ++ show ifLabelNum
 
         preCode = [
-            EmptyLine,
-            Instruction "beq" [getRegister condition varTable, "$0", ifLabel]
+            Instruction "beq" [conditionReg, "$0", ifLabel]
             ]
         postCode = [
             EmptyLine,
             Label ifLabel
             ]
-    in (preCode ++ innerBlock ++ postCode, varTable) -- not passing varTableNew because scope
+    in (EmptyLine:conditionCode ++ preCode ++ innerBlock ++ postCode, varTable) -- not passing varTableNew because scope
 
 
 
