@@ -115,19 +115,30 @@ translate (PrintStmt withNL expr) varTable =
     (let (code, reg) = expressionEval expr varTable
     in code ++ asmPrintReg reg ++ if withNL then printNewLineCall else [], varTable)
 
-translate (IfStmt expr block) varTable@VariableTracker{table=vars, stringLabels=labels, ifLabelId=ifLabelNum} = 
-    let ifLabel = "if_end_" ++ show ifLabelNum
+translate (IfStmt expr block elseBlock) varTable@VariableTracker{table=vars, stringLabels=labels, ifLabelId=ifLabelNum} = 
+    let ifLabel = "if_end_" ++ show ifLabelNum -- jump after if block
+        elseLabel = "else_end_" ++ show ifLabelNum -- jump after else block
         
         (conditionCode, conditionReg) = expressionEval expr varTable
         (innerBlock, VariableTracker{ifLabelId=newIfLabelId}) = translator block (addToIfLabelId varTable 1)
         
+        
 
         jump = [Instruction "beq" [conditionReg, "$0", ifLabel]]
-        postCode = [
+        afterIfBlock = [
             EmptyLine,
             Label ifLabel
             ]
-    in (EmptyLine:conditionCode ++ jump ++ innerBlock ++ postCode, setToIfLabelId varTable newIfLabelId) -- not passing varTableNew because scope
+        
+        (code, finalIfLabelId) = case elseBlock of
+            [] -> (EmptyLine:conditionCode ++ jump ++ innerBlock ++ afterIfBlock, newIfLabelId)
+            block -> 
+                let (innerElseBlock, VariableTracker{ifLabelId=postElseLabelId}) = translator elseBlock (setToIfLabelId varTable newIfLabelId)
+                    afterElseBlock = [EmptyLine, Label elseLabel]
+                in (EmptyLine:conditionCode ++ jump ++ innerBlock ++ [Instruction "j" [elseLabel]] ++ afterIfBlock ++ innerElseBlock ++ afterElseBlock, postElseLabelId)
+        
+        
+    in (code, setToIfLabelId varTable finalIfLabelId) -- not passing varTableNew because scope
 
 translate stmt varTable = error $ "Failed on the statement: " ++ show stmt
 
@@ -148,6 +159,7 @@ translateData [] = ([], [])
 translateData ((CStmtStr name value):ls)
     | name == "main" = error "Cannot use label main"
     | "if_end_" `isPrefixOf` name = error "Label cannot start with 'if_end_'"
+    | "else_end_" `isPrefixOf` name = error "Label cannot start with 'else_end_'"
     | name `elem` labels = error $ "Label already used: " ++ name
     | otherwise = (AsmString name value:aData, name:labels)
     where (aData, labels) = translateData ls

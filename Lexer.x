@@ -9,6 +9,7 @@ import Token
 
 $digit = 0-9		  	-- digits
 $alpha = [a-zA-Z]		-- alphabetic characters
+$notv = [^$alpha $digit \_]
 
 tokens :-
 
@@ -19,6 +20,7 @@ tokens :-
   const                 { \s -> Const }
   in					          { \s -> In }
   if                    { \s -> If }
+  \n*else               { \s -> Else }
   println               { \s -> Print True }
   print                 { \s -> Print False }
   inf                   { \s -> Infinity }
