@@ -121,21 +121,19 @@ translate (IfStmt expr block elseBlock) varTable@VariableTracker{table=vars, str
         
         (conditionCode, conditionReg) = expressionEval expr varTable
         (innerBlock, VariableTracker{ifLabelId=newIfLabelId}) = translator block (addToIfLabelId varTable 1)
-        
-        
 
-        jump = [Instruction "beq" [conditionReg, "$0", ifLabel]]
+        ifCondition = EmptyLine:conditionCode ++ [Instruction "beq" [conditionReg, "$0", ifLabel]]
         afterIfBlock = [
             EmptyLine,
             Label ifLabel
             ]
         
         (code, finalIfLabelId) = case elseBlock of
-            [] -> (EmptyLine:conditionCode ++ jump ++ innerBlock ++ afterIfBlock, newIfLabelId)
+            [] -> (ifCondition ++ innerBlock ++ afterIfBlock, newIfLabelId)
             block -> 
                 let (innerElseBlock, VariableTracker{ifLabelId=postElseLabelId}) = translator elseBlock (setToIfLabelId varTable newIfLabelId)
                     afterElseBlock = [EmptyLine, Label elseLabel]
-                in (EmptyLine:conditionCode ++ jump ++ innerBlock ++ [Instruction "j" [elseLabel]] ++ afterIfBlock ++ innerElseBlock ++ afterElseBlock, postElseLabelId)
+                in (ifCondition ++ innerBlock ++ [Instruction "j" [elseLabel]] ++ afterIfBlock ++ innerElseBlock ++ afterElseBlock, postElseLabelId)
         
         
     in (code, setToIfLabelId varTable finalIfLabelId) -- not passing varTableNew because scope

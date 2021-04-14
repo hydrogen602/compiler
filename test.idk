@@ -7,14 +7,15 @@ const hi = "Hello World!"
 
 let c = 1
 
-if c + -1 {
-    println hi
-    if 1 + c {
-        println 6
-    }
-}
-else {
+if c + -1{
+
+}   
+else  
+{  
+
     println 5
+
+
 }
 println c
 

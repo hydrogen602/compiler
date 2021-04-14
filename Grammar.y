@@ -45,7 +45,7 @@ Start   : CStmt '\n' Start                         { startHelper ($1) ($3) }
 CStmt   : const var '=' str                        { CStmtStr $2 $4 }
 
 Block   : Stmt '\n' Block                          { ($1):($3) }
-        | Stmt '\n'                                { [$1] }
+        | {- Empty -}                              { [] }
 
 Stmt    : let var '=' Expr                         { LetStmt $2 $4 }
         | var '=' Expr                             { AssignStmt $1 $3 }

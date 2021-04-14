@@ -10,19 +10,20 @@ import Token
 $digit = 0-9		  	-- digits
 $alpha = [a-zA-Z]		-- alphabetic characters
 $notv = [^$alpha $digit \_]
+$aw = [$white \n]
 
 tokens :-
 
   \n$white*             { \s -> NewLine }
   $white+				        ;
   "--".*\n*				      ;
-  let					          { \s -> Let }
-  const                 { \s -> Const }
-  in					          { \s -> In }
-  if                    { \s -> If }
-  \n*else               { \s -> Else }
-  println               { \s -> Print True }
-  print                 { \s -> Print False }
+  let  	          { \s -> Let }
+  const            { \s -> Const }
+  in   	          { \s -> In }
+  if               { \s -> If }
+  \n*else$aw*      { \s -> Else }
+  println          { \s -> Print True }
+  print            { \s -> Print False }
   inf                   { \s -> Infinity }
   where                 { \s -> Where }
   U                     { \s -> Union }
@@ -34,7 +35,7 @@ tokens :-
   \)                    { \s -> RParens }
   \[                    { \s -> LSqB }
   \]                    { \s -> RSqB }
-  \{$white*\n*          { \s -> LCurly }
+  \{$aw*                { \s -> LCurly }
   \}                    { \s -> RCurly }
   \=                    { \s -> Equals }
   \,                    { \s -> Comma }
