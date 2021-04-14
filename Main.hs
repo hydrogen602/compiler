@@ -40,20 +40,20 @@ import Debug.Trace
 -- registerAssign stmts usedLabels = registerAssignHelper stmts usedLabels ["$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7"]
 
 
-
+-- no branches in expressions!!
 expressionEvalHelper :: [TmpReg] -> Expr -> VariableTracker -> ([Line], String) -- returns lines and register where result is
 expressionEvalHelper _ (Variabl s) varTable = 
     ([], getRegister s varTable)
 
-expressionEvalHelper (register:_) (Immediate v) varTable = 
+expressionEvalHelper (register:_) (Immediate v) _ = 
     let code = asmSetToImmediate register v
     in (code, register)
 
-expressionEvalHelper (tmp:_) (ExprPlus (Variabl s) (Immediate n)) varTable = trace ("bbbbb: " ++ s) $
+expressionEvalHelper (tmp:_) (ExprPlus (Variabl s) (Immediate n)) varTable = --trace ("bbbbb: " ++ s) $
     let reg = getRegister s varTable
     in  (asmAddImmediate tmp reg n, tmp)
 
-expressionEvalHelper tmpRegLs (ExprPlus (Variabl s) e) varTable = trace ("aaaaa: " ++ s) $
+expressionEvalHelper tmpRegLs (ExprPlus (Variabl s) e) varTable = --trace ("aaaaa: " ++ s) $
     let register = getRegister s varTable
         (code, reg) = expressionEvalHelper tmpRegLs e varTable
         codeAdd = asmAddRegisters reg register reg
@@ -99,7 +99,7 @@ translate (AssignStmt name val) varTable =
                 let code = expressionSetReg register expr varTable
                 in code, varTable)
 
-translate (PrintStmt withNL (Variabl name)) varTable@(vars, labels, _) = 
+translate (PrintStmt withNL (Variabl name)) varTable@VariableTracker{table=vars, stringLabels=labels} = 
     ((case getRegisterMaybe name varTable of
         (Just register) -> asmPrintReg register
         Nothing -> 
@@ -111,23 +111,25 @@ translate (PrintStmt withNL (Variabl name)) varTable@(vars, labels, _) =
 
 translate (PrintStmt withNL (Immediate n)) varTable = (asmPrintInt n ++ if withNL then printNewLineCall else [], varTable)
 
-translate (IfStmt expr block) (vars, stringLabels, ifLabelNum) = 
-    let varTable = (vars, stringLabels, ifLabelNum + 1)
+translate (PrintStmt withNL expr) varTable = 
+    (let (code, reg) = expressionEval expr varTable
+    in code ++ asmPrintReg reg ++ if withNL then printNewLineCall else [], varTable)
 
+translate (IfStmt expr block) varTable@VariableTracker{table=vars, stringLabels=labels, ifLabelId=ifLabelNum} = 
+    let ifLabel = "if_end_" ++ show ifLabelNum
+        
         (conditionCode, conditionReg) = expressionEval expr varTable
+        (innerBlock, VariableTracker{ifLabelId=newIfLabelId}) = translator block (addToIfLabelId varTable 1)
+        
 
-        (innerBlock, varTableNew) = translator block varTable
-        ifLabel = "if_end_" ++ show ifLabelNum
-
-        preCode = [
-            Instruction "beq" [conditionReg, "$0", ifLabel]
-            ]
+        jump = [Instruction "beq" [conditionReg, "$0", ifLabel]]
         postCode = [
             EmptyLine,
             Label ifLabel
             ]
-    in (EmptyLine:conditionCode ++ preCode ++ innerBlock ++ postCode, varTable) -- not passing varTableNew because scope
+    in (EmptyLine:conditionCode ++ jump ++ innerBlock ++ postCode, setToIfLabelId varTable newIfLabelId) -- not passing varTableNew because scope
 
+translate stmt varTable = error $ "Failed on the statement: " ++ show stmt
 
 
 translator :: [Stmt] -> VariableTracker -> ([Line], VariableTracker)
