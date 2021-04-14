@@ -99,7 +99,7 @@ translate (AssignStmt name val) varTable =
                 let code = expressionSetReg register expr varTable
                 in code, varTable)
 
-translate (PrintStmt withNL (Variabl name)) varTable@(vars, labels, _) = 
+translate (PrintStmt withNL (Variabl name)) varTable@(vars, labels) = 
     ((case getRegisterMaybe name varTable of
         (Just register) -> asmPrintReg register
         Nothing -> 
@@ -111,24 +111,21 @@ translate (PrintStmt withNL (Variabl name)) varTable@(vars, labels, _) =
 
 translate (PrintStmt withNL (Immediate n)) varTable = (asmPrintInt n ++ if withNL then printNewLineCall else [], varTable)
 
-translate (IfStmt expr block []) varTable@(vars, stringLabels, ifLabelNum) = 
-    let ifEndLabel = "if_end_" ++ show ifLabelNum
+translate (IfStmt expr block []) varTable@(vars, stringLabels) = 
+    let ifEndLabel = getUnusedIfEndLabel []
 
-        newVarTable = (updateIfLabelNum varTable 1)
+        (conditionCode, conditionReg) = expressionEval expr varTable
 
-        (conditionCode, conditionReg) = expressionEval expr newVarTable
+        (innerBlock, _) = translator block varTable
 
-        (innerBlock, (_, _, ifLabelNumNew)) = translator block newVarTable
-        
 
         preCode = EmptyLine:conditionCode ++ [Instruction "beq" [conditionReg, "$0", ifEndLabel]]
         postCode = [
             EmptyLine,
             Label ifEndLabel
             ]
-        
-        updatedVarTable = setIfLabelNum varTable ifLabelNumNew -- we don't keep var data because scope - but if ids are global
-    in (preCode ++ innerBlock ++ postCode, updatedVarTable)
+
+    in (preCode ++ innerBlock ++ postCode, varTable)
 
 
 translator :: [Stmt] -> VariableTracker -> ([Line], VariableTracker)

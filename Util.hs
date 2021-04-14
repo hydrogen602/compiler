@@ -40,3 +40,17 @@ argumentExtract _ [_] = Nothing
 argumentExtract name (e:arg:args)
     | name == e = Just arg 
     | otherwise = argumentExtract name args
+
+
+getUnusedIfEndLabelHelper :: [Line] -> Int 
+getUnusedIfEndLabelHelper [] = 0
+getUnusedIfEndLabelHelper (Label ('i':'f':'_':'e':'n':'d':'_':num):rest) = 
+    let n = (read num :: Int) + 1
+        nRest = getUnusedIfEndLabelHelper rest
+    in max n nRest
+getUnusedIfEndLabelHelper (_:rest) = getUnusedIfEndLabelHelper rest
+
+
+getUnusedIfEndLabel :: [Line] -> String
+getUnusedIfEndLabel = 
+    ("if_end_" ++) . show . getUnusedIfEndLabelHelper

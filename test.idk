@@ -12,7 +12,8 @@ if c + -1
 {
     println hi
 }
-else 
+--else 
+if c
 {
     println elseBlock
 }

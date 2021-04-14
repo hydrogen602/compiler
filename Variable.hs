@@ -5,7 +5,7 @@ import Debug.Trace
 type TmpReg = String
 type SReg = String
 
-type VariableTracker = ([RegisterAssignment], [String], Int) -- variables (registers) & string data labels & if label ids
+type VariableTracker = ([RegisterAssignment], [String]) -- variables (registers) & string data labels & if label ids
 
 data RegisterAssignment = 
     Assigned SReg String | -- first is register, 2nd variable
@@ -18,20 +18,20 @@ allSRegisters :: [SReg]
 allSRegisters = ["$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7"]
 
 newVarTracker :: [String] -> VariableTracker
-newVarTracker dataLabels = (map Unassigned allSRegisters, dataLabels, 0)
+newVarTracker dataLabels = (map Unassigned allSRegisters, dataLabels)
 
 assignNewVar :: VariableTracker -> String -> VariableTracker
-assignNewVar (assignments, dataLabels, ifLabelId) name = 
+assignNewVar (assignments, dataLabels) name = 
     let findFreeAndAssign :: [RegisterAssignment] -> [RegisterAssignment]
         findFreeAndAssign [] = error "Ran out of registers to assign"
         findFreeAndAssign (e@(Assigned _ _):ls) = e:findFreeAndAssign ls
         findFreeAndAssign (Unassigned reg:ls) = Assigned reg name:ls
 
         newAssigns = findFreeAndAssign assignments
-    in (newAssigns, dataLabels, ifLabelId) 
+    in (newAssigns, dataLabels) 
 
 getRegisterMaybe :: String -> VariableTracker -> Maybe SReg 
-getRegisterMaybe name (vars, _, _) =
+getRegisterMaybe name (vars, _) =
     let helper :: [RegisterAssignment] -> Maybe SReg
         helper [] = Nothing 
         helper ((Assigned reg varName):ls)
@@ -45,9 +45,3 @@ getRegister name varTable =
     case getRegisterMaybe name varTable of
         (Just s) -> s
         Nothing -> error $ "Cannot find variable: " ++ name
-
-setIfLabelNum :: VariableTracker -> Int -> VariableTracker
-setIfLabelNum (assignments, dataLabels, _) newIfLabelId = (assignments, dataLabels, newIfLabelId)
-
-updateIfLabelNum :: VariableTracker -> Int -> VariableTracker
-updateIfLabelNum (assignments, dataLabels, ifLabelId) n = (assignments, dataLabels, ifLabelId + n)
