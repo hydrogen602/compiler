@@ -1,0 +1,5 @@
+let c = 10
+if c < 5 {
+  println 1
+}
+println c

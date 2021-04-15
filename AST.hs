@@ -18,7 +18,8 @@ type AST = ([ConstStmt], [Stmt])
 data Expr = 
     Variabl String | 
     Immediate Int |
-    ExprPlus Expr Expr
+    ExprPlus Expr Expr |
+    ExprLess Expr Expr
     deriving Show
 
 

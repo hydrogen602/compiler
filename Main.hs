@@ -11,35 +11,6 @@ import Variable
 import Debug.Trace
 
 
-
--- type VariableTracker = ([(String, String)], [String], Int) -- variables (registers) & string data labels & if label ids
-
--- type TmpReg = String
-
--- getRegister :: String -> VariableTracker -> String 
--- getRegister name (varTable, _, _) =
---     case lookup name varTable of
---         (Just s) -> s
---         Nothing -> error $ "Cannot find variable: " ++ name
-
-
-
--- registerAssignHelper :: [Stmt] -> [String] -> [String] -> [(String, String)]
--- registerAssignHelper [] _ reg = []
--- registerAssignHelper ((LetStmt name val):ls) _ [] = 
---     error $ "Ran out of registers to assign with var: " ++ name
--- registerAssignHelper ((LetStmt name val):ls) usedLabels (r:reg) = 
---     let others = registerAssignHelper ls usedLabels reg
---         conflict = any (\(n, _) -> n == name) others || name `elem` usedLabels
-
---     in  if conflict then error $ "Variable name \"" ++ name ++ "\" is declared more than once"
---         else (name, r):others
--- registerAssignHelper (_:ls) usedLabels reg = registerAssignHelper ls usedLabels reg
-
--- registerAssign :: [Stmt] -> [String] -> [(String, String)]
--- registerAssign stmts usedLabels = registerAssignHelper stmts usedLabels ["$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7"]
-
-
 -- no branches in expressions!!
 expressionEvalHelper :: [TmpReg] -> Expr -> VariableTracker -> ([Line], String) -- returns lines and register where result is
 expressionEvalHelper _ (Variabl s) varTable = 
@@ -53,24 +24,30 @@ expressionEvalHelper (tmp:_) (ExprPlus (Variabl s) (Immediate n)) varTable = --t
     let reg = getRegister s varTable
     in  (asmAddImmediate tmp reg n, tmp)
 
-expressionEvalHelper tmpRegLs (ExprPlus (Variabl s) e) varTable = --trace ("aaaaa: " ++ s) $
+expressionEvalHelper (tmp:tmpRegLs) (ExprPlus (Variabl s) e) varTable = trace ("aaaaa: " ++ s) $
     let register = getRegister s varTable
         (code, reg) = expressionEvalHelper tmpRegLs e varTable
-        codeAdd = asmAddRegisters reg register reg
-    in (code ++ codeAdd, reg)
+        codeAdd = asmAddRegisters tmp register reg
+    in (code ++ codeAdd, tmp)
 
 expressionEvalHelper tmpRegLs@(tmp:_) (ExprPlus (Immediate v) e) varTable = --trace ("immediate = " ++ show v) $
     let (code, reg) = expressionEvalHelper tmpRegLs e varTable
         (codeAdd, regOut) = (asmAddImmediate tmp reg v, tmp)
     in  (code ++ codeAdd, regOut)
 
-expressionEvalHelper (tmpReg:tmpRegLs) (ExprPlus e1 e2) varTable = --trace "general expr eval helper" $
+expressionEvalHelper (tmp:tmpRegLs) (ExprPlus e1 e2) varTable = --trace "general expr eval helper" $
+    let (code1, reg1) = expressionEvalHelper (tmp:tmpRegLs) e1 varTable
+        (code2, reg2) = expressionEvalHelper tmpRegLs e2 varTable
+        set2 = asmAddRegisters tmp reg1 reg2 -- bug probably?
+    in (concat [code1, code2, set2], tmp)
+
+expressionEvalHelper (tmpReg:tmpRegLs) (ExprLess e1 e2) varTable =
     let (code1, reg1) = expressionEvalHelper (tmpReg:tmpRegLs) e1 varTable
         (code2, reg2) = expressionEvalHelper tmpRegLs e2 varTable
-        set2 = asmAddRegisters reg1 reg1 reg2
-    in (concat [code1, code2, set2], reg1)
+        set2 = asmLessThanRegisters tmpReg reg1 reg2
+    in (concat [code1, code2, set2], tmpReg)
 
-
+expressionEvalHelper regs expr varTable = error $ "Expression not dealt with: expr = " ++ show expr
 
 expressionEval :: Expr -> VariableTracker -> ([Line], String)
 expressionEval = expressionEvalHelper tmpRegs
@@ -80,7 +57,7 @@ expressionSetReg s expr varTable = fst $ expressionEvalHelper (s:tmpRegs) expr v
 
 
 translate :: Stmt -> VariableTracker -> ([Line], VariableTracker)
-translate (LetStmt name val) varTable = 
+translate (LetStmt name val) varTable = trace ("let stmt! name = " ++ name) $
     let varTableNew = assignNewVar varTable name
         register = getRegister name varTableNew
     in (case val of

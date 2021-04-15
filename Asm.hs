@@ -1,7 +1,7 @@
 module Asm ( 
     generateText, asmPrintInt, asmPrintReg, 
     asmSetToRegister, asmSetToImmediate, asmPrintConstStr, 
-    asmAddRegisters, asmAddImmediate
+    asmAddRegisters, asmAddImmediate, asmLessThanRegisters
     ) where
 
 import Data.List
@@ -90,3 +90,6 @@ asmAddRegisters result r1 r2 = [Instruction "add" [result, r1, r2]]
 
 asmAddImmediate :: String -> String -> Int -> [Line]
 asmAddImmediate result r1 n = [Instruction "addi" [result, r1, show n]]
+
+asmLessThanRegisters :: String -> String -> String -> [Line]
+asmLessThanRegisters result r1 r2 = [Instruction "slt" [result, r1, r2]]

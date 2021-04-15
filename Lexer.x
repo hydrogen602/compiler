@@ -42,7 +42,7 @@ tokens :-
   \,                    { \s -> Comma }
   \-                    { \s -> Minus }
   \+                    { \s -> Plus }
-  [\*\/]			          { \s -> Sym (head s) }
+  [\*\/\<\>]            { \s -> Sym (head s) }
   $alpha [$alpha $digit \_]*		{ \s -> Var s }
 
 {

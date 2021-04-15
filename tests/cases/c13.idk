@@ -1,0 +1,13 @@
+let a = 0
+let b = 1
+let n = 1000
+
+while a < n {
+    print a
+    print " "
+
+    let c = a + b
+    a = b
+    b = c
+}
+println ""

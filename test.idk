@@ -17,14 +17,9 @@ let c = 10
 --    println "B"
 --    println "A"
 --}
-print "c = "
-println c
 
-while c {
-    c = c + -1
-    print "c = "
-    println c
-}
+if c < 5 {}
+println c
 
 
 --if y {
