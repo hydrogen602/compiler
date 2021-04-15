@@ -49,6 +49,8 @@ Block   : Stmt '\n' Block                          { ($1):($3) }
 
 Stmt    : let var '=' Expr                         { LetStmt $2 $4 }
         | var '=' Expr                             { AssignStmt $1 $3 }
+        | println str                              { PrintLiteralStmt True $2 }
+        | print str                                { PrintLiteralStmt False $2 }
         | println Expr                             { PrintStmt True $2 }
         | print Expr                               { PrintStmt False $2 }
         | if Expr '{' Block '}' ElseP              { IfStmt $2 $4 $6 }

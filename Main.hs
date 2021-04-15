@@ -138,6 +138,8 @@ translate (IfStmt expr block elseBlock) varTable@VariableTracker{table=vars, str
         
     in (code, setToIfLabelId varTable finalIfLabelId) -- not passing varTableNew because scope
 
+translate (PrintLiteralStmt _ _) _ = error "Failed: PrintLiteralStmt should not appear in translate"
+
 translate stmt varTable = error $ "Failed on the statement: " ++ show stmt
 
 
@@ -158,9 +160,50 @@ translateData ((CStmtStr name value):ls)
     | name == "main" = error "Cannot use label main"
     | "if_end_" `isPrefixOf` name = error "Label cannot start with 'if_end_'"
     | "else_end_" `isPrefixOf` name = error "Label cannot start with 'else_end_'"
+--    | "str_" `isPrefixOf` name = error "Label cannot start with 'str_'"
     | name `elem` labels = error $ "Label already used: " ++ name
     | otherwise = (AsmString name value:aData, name:labels)
     where (aData, labels) = translateData ls
+
+
+
+printLiteralHelper :: [ConstStmt] -> Stmt -> ([ConstStmt], Stmt)
+
+printLiteralHelper consts (IfStmt expr ifBlock elseBlock) =
+    let (ifConsts, ifAst) = printLiteralProcessor consts ifBlock
+        (elseConsts, elseAst) = printLiteralProcessor ifConsts elseBlock
+        --(IfAst, IfConsts)
+    in  (elseConsts, IfStmt expr ifAst elseAst)  -- (stmt:ast, consts)
+
+printLiteralHelper consts (PrintLiteralStmt nl s) = 
+    let existsAlready :: [ConstStmt] -> Maybe String
+        existsAlready [] = Nothing  
+        existsAlready (CStmtStr labelName str:ls) =
+            if str == s then Just labelName
+            else existsAlready ls
+        
+        findFreeLabel :: [ConstStmt] -> Int
+        findFreeLabel [] = 0
+        findFreeLabel (CStmtStr ('s':'t':'r':'_':num) _:ls) =
+            let n = 1 + read num :: Int
+            in max n (findFreeLabel ls)
+        findFreeLabel (_:ls) = findFreeLabel ls
+
+    in case existsAlready consts of 
+        (Just label) -> (consts, PrintStmt nl (Variabl label)) 
+        Nothing -> 
+            let label = "str_" ++ show (findFreeLabel consts)
+            in (CStmtStr label s:consts, PrintStmt nl (Variabl label))
+
+printLiteralHelper consts st = (consts, st)
+
+
+printLiteralProcessor :: [ConstStmt] -> [Stmt] -> ([ConstStmt], [Stmt])
+printLiteralProcessor consts [] = (consts, [])
+printLiteralProcessor consts (st:stmts) =
+    let (constsNew, stNew) = printLiteralHelper consts st
+        (constsFinal, stmtsFinal) = printLiteralProcessor constsNew stmts
+    in (constsFinal, stNew:stmtsFinal)
 
 
 main :: IO ()
@@ -175,7 +218,8 @@ main = do
             (Just outFile) -> outFile
             Nothing -> "out.s"
 
-    let (consts, ast) = parser (s ++ "\n")
+        (preConsts, preAst) = parser (s ++ "\n")
+        (consts, ast) = printLiteralProcessor preConsts preAst
 
     print consts
     print ast
@@ -187,9 +231,9 @@ main = do
     let (asmData, dataLabels) = translateData consts
 
     --let registerTable = registerAssign ast dataLabels
-    let (asm, table) = translator ast (newVarTracker dataLabels)
+        (asm, table) = translator ast (newVarTracker dataLabels)
 
-    let out = generateText (asm, asmData)
+        out = generateText (asm, asmData)
 
     --putStrLn out
     writeFile outFileName out

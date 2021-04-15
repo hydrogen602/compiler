@@ -8,16 +8,19 @@ const hi = "Hello World!"
 let c = 1
 
 if c + -1{
-
+    println "A"
 }   
 else  
 {  
+    let constA = 1
 
-    println 5
-
-
+    println "B"
+    println "A"
 }
 println c
+println "C"
+
+
 
 --if y {
 --print yIs

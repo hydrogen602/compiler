@@ -4,11 +4,12 @@ data Stmt =
         LetStmt String Expr
       | AssignStmt String Expr
       | PrintStmt Bool Expr
+      | PrintLiteralStmt Bool String
       | IfStmt Expr [Stmt] [Stmt]
       deriving Show
 
 data ConstStmt =
-    CStmtStr String String
+    CStmtStr String String -- var, string
     deriving Show
 
 type AST = ([ConstStmt], [Stmt])

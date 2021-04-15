@@ -17,13 +17,13 @@ tokens :-
   \n$white*             { \s -> NewLine }
   $white+				        ;
   "--".*\n*				      ;
-  let  	          { \s -> Let }
-  const            { \s -> Const }
-  in   	          { \s -> In }
-  if               { \s -> If }
-  \n*else$aw*      { \s -> Else }
-  println          { \s -> Print True }
-  print            { \s -> Print False }
+  let  	                { \s -> Let }
+  const                 { \s -> Const }
+  in   	                { \s -> In }
+  if                    { \s -> If }
+  \n*else$aw*           { \s -> Else }
+  println               { \s -> Print True }
+  print                 { \s -> Print False }
   inf                   { \s -> Infinity }
   where                 { \s -> Where }
   U                     { \s -> Union }
@@ -41,7 +41,7 @@ tokens :-
   \,                    { \s -> Comma }
   \-                    { \s -> Minus }
   \+                    { \s -> Plus }
-  [\*\/]			        { \s -> Sym (head s) }
+  [\*\/]			          { \s -> Sym (head s) }
   $alpha [$alpha $digit \_]*		{ \s -> Var s }
 
 {
