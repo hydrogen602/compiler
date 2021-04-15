@@ -69,8 +69,8 @@ Stmt    : let var '=' Expr                         { LetStmt $2 $4 }
 ElseP   : else '{' Block '}'                       { $3 }
         | {- Empty -}                              { [] }
 
-Expr    : Expr '+' Expr                            { ExprPlus $1 $3 }
-        | Expr '<' Expr                            { ExprLess $1 $3 }
+Expr    : Expr '+' Expr                            { Expr '+' $1 $3 }
+        | Expr '<' Expr                            { Expr '<' $1 $3 }
         | Value                                    { $1 }
 
 Value   : var                                      { Variabl $1 }
