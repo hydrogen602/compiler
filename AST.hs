@@ -6,6 +6,7 @@ data Stmt =
       | PrintStmt Bool Expr
       | PrintLiteralStmt Bool String
       | IfStmt Expr [Stmt] [Stmt]
+      | WhileStmt Expr [Stmt]
       deriving Show
 
 data ConstStmt =

@@ -5,21 +5,26 @@ const hi = "Hello World!"
 --let y = 0
 --y = x + 2 + -1
 
-let c = 1
+let c = 10
 
-if c + -1{
-    println "A"
-}   
-else  
-{  
-    let constA = 1
 
-    println "B"
-    println "A"
-}
+--if c + -1 {
+--    println "A"
+--}   
+--else {  
+--    let constA = 1
+--
+--    println "B"
+--    println "A"
+--}
+print "c = "
 println c
-println "C"
 
+while c {
+    c = c + -1
+    print "c = "
+    println c
+}
 
 
 --if y {

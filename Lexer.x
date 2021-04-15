@@ -22,6 +22,7 @@ tokens :-
   in   	                { \s -> In }
   if                    { \s -> If }
   \n*else$aw*           { \s -> Else }
+  while                 { \s -> While }
   println               { \s -> Print True }
   print                 { \s -> Print False }
   inf                   { \s -> Infinity }

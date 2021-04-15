@@ -7,6 +7,7 @@ data Token =
     In          |
     If          |
     Else        |
+    While       |
     Equals      |
     Infinity    |
     Union       |

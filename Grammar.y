@@ -5,6 +5,7 @@ import Data.Char
 import Lexer
 import Token
 import AST
+import Debug.Trace
 }
 
 %name calc
@@ -17,6 +18,7 @@ import AST
       in              { In }
       if              { If }
       else            { Else }
+      while           { While }
       int             { Integer $$ }
       var             { Var $$ }
       where           { Where }
@@ -54,6 +56,7 @@ Stmt    : let var '=' Expr                         { LetStmt $2 $4 }
         | println Expr                             { PrintStmt True $2 }
         | print Expr                               { PrintStmt False $2 }
         | if Expr '{' Block '}' ElseP              { IfStmt $2 $4 $6 }
+        | while Expr '{' Block '}'                 { WhileStmt $2 $4 }
 
 ElseP   : else '{' Block '}'                       { $3 }
         | {- Empty -}                              { [] }
@@ -69,7 +72,7 @@ parseError :: [Token] -> a
 parseError tok = error $ "Parse error " ++ show tok
 
 parser :: String -> AST
-parser s = calc $ lexThis s
+parser s = let x = lexThis s in calc (trace (show x) x)
 
 startHelper :: ConstStmt -> AST -> AST
 startHelper c (consts, stmts) = (c:consts, stmts)

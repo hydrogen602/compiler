@@ -140,6 +140,17 @@ translate (IfStmt expr block elseBlock) varTable@VariableTracker{table=vars, str
 
 translate (PrintLiteralStmt _ _) _ = error "Failed: PrintLiteralStmt should not appear in translate"
 
+translate (WhileStmt expr block) varTable@VariableTracker{table=vars, stringLabels=labels, ifLabelId=ifLabelNum} =
+    let loopLabel = "while_loop_" ++ show ifLabelNum
+        endLabel = "while_end_" ++ show ifLabelNum
+
+        (conditionCode, conditionReg) = expressionEval expr varTable
+        (innerBlock, VariableTracker{ifLabelId=newIfLabelId}) = translator block (addToIfLabelId varTable 1)
+
+        ifCondition = EmptyLine:Label loopLabel:conditionCode ++ [Instruction "beq" [conditionReg, "$0", endLabel]]
+
+    in (ifCondition ++ innerBlock ++ [Instruction "j" [loopLabel], EmptyLine, Label endLabel], setToIfLabelId varTable newIfLabelId)
+
 translate stmt varTable = error $ "Failed on the statement: " ++ show stmt
 
 
@@ -160,6 +171,7 @@ translateData ((CStmtStr name value):ls)
     | name == "main" = error "Cannot use label main"
     | "if_end_" `isPrefixOf` name = error "Label cannot start with 'if_end_'"
     | "else_end_" `isPrefixOf` name = error "Label cannot start with 'else_end_'"
+    | "while_" `isPrefixOf` name = error "Label cannot start with 'while_'"
 --    | "str_" `isPrefixOf` name = error "Label cannot start with 'str_'"
     | name `elem` labels = error $ "Label already used: " ++ name
     | otherwise = (AsmString name value:aData, name:labels)
@@ -174,6 +186,10 @@ printLiteralHelper consts (IfStmt expr ifBlock elseBlock) =
         (elseConsts, elseAst) = printLiteralProcessor ifConsts elseBlock
         --(IfAst, IfConsts)
     in  (elseConsts, IfStmt expr ifAst elseAst)  -- (stmt:ast, consts)
+
+printLiteralHelper consts (WhileStmt expr block) =
+    let (whileConsts, whileAst) = printLiteralProcessor consts block
+    in  (whileConsts, WhileStmt expr whileAst)
 
 printLiteralHelper consts (PrintLiteralStmt nl s) = 
     let existsAlready :: [ConstStmt] -> Maybe String
