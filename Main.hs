@@ -148,18 +148,31 @@ translator (st:ls) varTable = --traceShow st $
 
 --translate (ConstStmt name value) varTable = undefined 
 
-translateData :: [ConstStmt] -> ([AsmData], [String])
-translateData [] = ([], [])
-translateData ((CStmtStr name value):ls)
+translateData :: [ConstStmt] -> VariableTracker -> ([AsmData], [String], VariableTracker)
+translateData [] varTable = ([], [], varTable)
+translateData ((CStmtStr name value):ls) varTable
     | name == "main" = error "Cannot use label main"
     | "if_end_" `isPrefixOf` name = error "Label cannot start with 'if_end_'"
     | "else_end_" `isPrefixOf` name = error "Label cannot start with 'else_end_'"
     | "while_" `isPrefixOf` name = error "Label cannot start with 'while_'"
 --    | "str_" `isPrefixOf` name = error "Label cannot start with 'str_'"
     | name `elem` labels = error $ "Label already used: " ++ name
-    | otherwise = (AsmString name value:aData, name:labels)
-    where (aData, labels) = translateData ls
+    | otherwise = (AsmString name value:aData, name:labels, varTableNew)
+    where (aData, labels, varTableNew) = translateData ls varTable
 
+translateData (CFunc name block:ls) varTable
+    | name == "main" = error "Cannot use label main"
+    | "if_end_" `isPrefixOf` name = error "Label cannot start with 'if_end_'"
+    | "else_end_" `isPrefixOf` name = error "Label cannot start with 'else_end_'"
+    | "while_" `isPrefixOf` name = error "Label cannot start with 'while_'"
+    | "str_" `isPrefixOf` name = error "Label cannot start with 'str_'"
+    | name `elem` labels = error $ "Label already used: " ++ name
+    | otherwise = --(AsmString name value:aData, name:labels)
+        let --printLiteralProcessor 
+            --AsmFunc name ([Line])
+            (code, varTableFinal) = translator block (newVarTrackerWithId (stringLabels varTable) (ifLabelId varTable))
+        in (AsmFunc name code:aData, name:labels, setToIfLabelId varTableFinal (ifLabelId varTableFinal))
+    where (aData, labels, varTableNew) = translateData ls varTable
 
 
 printLiteralHelper :: [ConstStmt] -> Stmt -> ([ConstStmt], Stmt)
@@ -180,6 +193,7 @@ printLiteralHelper consts (PrintLiteralStmt nl s) =
         existsAlready (CStmtStr labelName str:ls) =
             if str == s then Just labelName
             else existsAlready ls
+        existsAlready (_:ls) = existsAlready ls -- ???
         
         findFreeLabel :: [ConstStmt] -> Int
         findFreeLabel [] = 0
@@ -205,6 +219,17 @@ printLiteralProcessor consts (st:stmts) =
     in (constsFinal, stNew:stmtsFinal)
 
 
+
+-- printLiteralProcessorForFunctions :: [ConstStmt] -> [ConstStmt] -> [ConstStmt]
+-- printLiteralProcessorForFunctions _ [] = []
+-- printLiteralProcessorForFunctions allConsts (CFunc name stmts:ls) = 
+--     let (constsNew, stmtsFinal) = printLiteralProcessor allConsts stmts
+--         constsFinal = printLiteralProcessorForFunctions constsNew ls
+
+--     in  
+
+
+
 main :: IO ()
 main = do
     args <- getArgs
@@ -220,6 +245,8 @@ main = do
         (preConsts, preAst) = parser (s ++ "\n")
         (consts, ast) = printLiteralProcessor preConsts preAst
 
+
+
     print consts
     print ast
 
@@ -227,12 +254,13 @@ main = do
 
     --putStrLn (show state)
 
-    let (asmData, dataLabels) = translateData consts
+    let (asmData, dataLabels, varTable) = translateData consts (newVarTracker dataLabels)
 
     --let registerTable = registerAssign ast dataLabels
-        (asm, table) = translator ast (newVarTracker dataLabels)
+        (asm, table) = translator ast varTable
 
-        out = generateText (asm, asmData)
+    print asmData
+    let out = generateText (asm, asmData)
 
     --putStrLn out
     writeFile outFileName out

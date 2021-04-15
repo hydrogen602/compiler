@@ -17,6 +17,9 @@ generateDataLine (AsmString name value) =
         padNum = max 1 (8 - 1 - len)
         padding = concat $ replicate padNum " "
     in name ++ ":" ++ padding ++ ".asciiz     \"" ++ value ++ "\""
+generateDataLine (AsmFunc name code) =
+    let lines = (EmptyLine:Label name:code) ++ [EmptyLine] 
+    in  intercalate "\n" (map generateLine lines)
 
 generateLine :: Line -> String
 generateLine (Instruction cmd args) = 

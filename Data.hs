@@ -7,6 +7,8 @@ data Line =
     deriving (Show, Eq)
 
 data AsmData =
-    AsmString String String -- label, data
+    AsmString String String | -- label, data
+    AsmFunc String [Line]
+    deriving (Show)
 
 type ASM = ([Line], [AsmData])

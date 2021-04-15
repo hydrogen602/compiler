@@ -20,6 +20,7 @@ import Debug.Trace
       while           { While }
       int             { Integer $$ }
       var             { Var $$ }
+      def             { Def }
       println         { Print True }
       print           { Print False }
       str             { Str $$ }
@@ -49,6 +50,7 @@ Start   : CStmt '\n' Start                         { startHelper ($1) ($3) }
         | Block                                    { ([], ($1)) }
 
 CStmt   : const var '=' str                        { CStmtStr $2 $4 }
+        | def var '(' ')' '{' Block '}'            { CFunc $2 $6 }
 
 Block   : Stmt '\n' Block                          { ($1):($3) }
         | {- Empty -}                              { [] }

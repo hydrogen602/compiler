@@ -1,6 +1,10 @@
 const hi = "Hello World!"
 --const yIs = "y = "
 
+def f() {
+    println 42
+}
+
 --let x = 5
 --let y = 0
 --y = x + 2 + -1

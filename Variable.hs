@@ -25,6 +25,9 @@ allSRegisters = ["$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7"]
 newVarTracker :: [String] -> VariableTracker
 newVarTracker dataLabels = VariableTracker { table=map Unassigned allSRegisters, stringLabels=dataLabels, ifLabelId=0 }
 
+newVarTrackerWithId :: [String] -> Int -> VariableTracker
+newVarTrackerWithId dataLabels n = VariableTracker { table=map Unassigned allSRegisters, stringLabels=dataLabels, ifLabelId=n }
+
 assignNewVar :: VariableTracker -> String -> VariableTracker
 assignNewVar varTrack name = 
     let findFreeAndAssign :: [RegisterAssignment] -> [RegisterAssignment]

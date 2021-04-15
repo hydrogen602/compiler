@@ -10,7 +10,8 @@ data Stmt =
       deriving Show
 
 data ConstStmt =
-    CStmtStr String String -- var, string
+    CStmtStr String String | -- var, string
+    CFunc String [Stmt] -- name, code
     deriving Show
 
 type AST = ([ConstStmt], [Stmt])

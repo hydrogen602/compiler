@@ -22,6 +22,7 @@ tokens :-
   if                    { \s -> If }
   \n*else$aw*           { \s -> Else }
   while                 { \s -> While }
+  def                   { \s -> Def }
   println               { \s -> Print True }
   print                 { \s -> Print False }
   "-"?$digit+				    { \s -> Integer (read s) }

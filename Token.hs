@@ -7,6 +7,7 @@ data Token =
     If          |
     Else        |
     While       |
+    Def         |
     Equals      |
     LParens     |
     RParens     |
