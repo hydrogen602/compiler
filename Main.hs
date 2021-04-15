@@ -11,6 +11,17 @@ import Variable
 import Debug.Trace
 
 
+asmDoStuffToRegisters :: Char -> (String -> String -> String -> [Line])
+asmDoStuffToRegisters '+' = asmAddRegisters
+asmDoStuffToRegisters '<' = asmLessThanRegisters
+asmDoStuffToRegisters char = error $ "Unknown operator (registers): " ++ [char]
+
+asmDoStuffImmediate :: Char -> (String -> String -> Int -> [Line])
+asmDoStuffImmediate '+' = asmAddImmediate
+asmDoStuffImmediate '<' = asmLessThanImmediate
+asmDoStuffImmediate char = error $ "Unknown operator (immediate): " ++ [char]
+
+
 -- no branches in expressions!!
 expressionEvalHelper :: [TmpReg] -> Expr -> VariableTracker -> ([Line], String) -- returns lines and register where result is
 expressionEvalHelper _ (Variabl s) varTable = 
@@ -20,32 +31,27 @@ expressionEvalHelper (register:_) (Immediate v) _ =
     let code = asmSetToImmediate register v
     in (code, register)
 
-expressionEvalHelper (tmp:_) (ExprPlus (Variabl s) (Immediate n)) varTable = --trace ("bbbbb: " ++ s) $
+expressionEvalHelper (tmp:_) (Expr sym (Variabl s) (Immediate n)) varTable = --trace ("bbbbb: " ++ s) $
     let reg = getRegister s varTable
-    in  (asmAddImmediate tmp reg n, tmp)
+    in  (asmDoStuffImmediate sym tmp reg n, tmp)
 
-expressionEvalHelper (tmp:tmpRegLs) (ExprPlus (Variabl s) e) varTable = trace ("aaaaa: " ++ s) $
+expressionEvalHelper (tmp:tmpRegLs) (Expr sym (Variabl s) e) varTable = trace ("aaaaa: " ++ s) $
     let register = getRegister s varTable
         (code, reg) = expressionEvalHelper tmpRegLs e varTable
-        codeAdd = asmAddRegisters tmp register reg
+        codeAdd = asmDoStuffToRegisters sym tmp register reg
     in (code ++ codeAdd, tmp)
 
-expressionEvalHelper tmpRegLs@(tmp:_) (ExprPlus (Immediate v) e) varTable = --trace ("immediate = " ++ show v) $
+expressionEvalHelper tmpRegLs@(tmp:_) (Expr sym (Immediate v) e) varTable = --trace ("immediate = " ++ show v) $
     let (code, reg) = expressionEvalHelper tmpRegLs e varTable
-        (codeAdd, regOut) = (asmAddImmediate tmp reg v, tmp)
+        (codeAdd, regOut) = (asmDoStuffImmediate sym tmp reg v, tmp)
     in  (code ++ codeAdd, regOut)
 
-expressionEvalHelper (tmp:tmpRegLs) (ExprPlus e1 e2) varTable = --trace "general expr eval helper" $
+expressionEvalHelper (tmp:tmpRegLs) (Expr sym e1 e2) varTable = --trace "general expr eval helper" $
     let (code1, reg1) = expressionEvalHelper (tmp:tmpRegLs) e1 varTable
         (code2, reg2) = expressionEvalHelper tmpRegLs e2 varTable
-        set2 = asmAddRegisters tmp reg1 reg2 -- bug probably?
+        set2 = asmDoStuffToRegisters sym tmp reg1 reg2 -- bug probably?
     in (concat [code1, code2, set2], tmp)
 
-expressionEvalHelper (tmpReg:tmpRegLs) (ExprLess e1 e2) varTable =
-    let (code1, reg1) = expressionEvalHelper (tmpReg:tmpRegLs) e1 varTable
-        (code2, reg2) = expressionEvalHelper tmpRegLs e2 varTable
-        set2 = asmLessThanRegisters tmpReg reg1 reg2
-    in (concat [code1, code2, set2], tmpReg)
 
 expressionEvalHelper regs expr varTable = error $ "Expression not dealt with: expr = " ++ show expr
 
@@ -63,7 +69,7 @@ translate (LetStmt name val) varTable = trace ("let stmt! name = " ++ name) $
     in (case val of
             (Variabl v) -> asmSetToRegister register (getRegister v varTableNew)
             (Immediate n) -> asmSetToImmediate register n
-            expr@(ExprPlus e1 e2) -> 
+            expr@(Expr sym e1 e2) -> 
                 let code = expressionSetReg register expr varTableNew
                 in code, varTableNew)
 
@@ -72,7 +78,7 @@ translate (AssignStmt name val) varTable =
     in (case val of
             (Variabl v) -> asmSetToRegister register (getRegister v varTable)
             (Immediate n) -> asmSetToImmediate register n
-            expr@(ExprPlus e1 e2) -> 
+            expr@(Expr sym e1 e2) -> 
                 let code = expressionSetReg register expr varTable
                 in code, varTable)
 
