@@ -19,15 +19,11 @@ tokens :-
   "--".*\n*				      ;
   let  	                { \s -> Let }
   const                 { \s -> Const }
-  in   	                { \s -> In }
   if                    { \s -> If }
   \n*else$aw*           { \s -> Else }
   while                 { \s -> While }
   println               { \s -> Print True }
   print                 { \s -> Print False }
-  inf                   { \s -> Infinity }
-  where                 { \s -> Where }
-  U                     { \s -> Union }
   "-"?$digit+				    { \s -> Integer (read s) }
   true                  { \s -> Integer 1 }
   false                 { \s -> Integer 0 }
@@ -40,9 +36,7 @@ tokens :-
   \}                    { \s -> RCurly }
   \=                    { \s -> Equals }
   \,                    { \s -> Comma }
-  \-                    { \s -> Minus }
-  \+                    { \s -> Plus }
-  [\*\/\<\>]            { \s -> Sym (head s) }
+  [\+\-\*\/\<\>]        { \s -> Sym (head s) }
   $alpha [$alpha $digit \_]*		{ \s -> Var s }
 
 {

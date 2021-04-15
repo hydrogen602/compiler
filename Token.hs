@@ -4,14 +4,10 @@ module Token where
 data Token =
     NewLine     |
     Let         |
-    In          |
     If          |
     Else        |
     While       |
     Equals      |
-    Infinity    |
-    Union       |
-    Where       |
     LParens     |
     RParens     |
     LCurly      |
@@ -19,8 +15,6 @@ data Token =
     LSqB        |
     RSqB        |
     Comma       |
-    Minus       |
-    Plus        |
     Print Bool  |
     Const       |
     Sym Char    |

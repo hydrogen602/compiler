@@ -15,15 +15,11 @@ import Debug.Trace
 %token 
       let             { Let }
       const           { Const }
-      in              { In }
       if              { If }
       else            { Else }
       while           { While }
       int             { Integer $$ }
       var             { Var $$ }
-      where           { Where }
-      inf             { Infinity }
-      U               { Union }
       println         { Print True }
       print           { Print False }
       str             { Str $$ }
@@ -37,8 +33,8 @@ import Debug.Trace
       '{'             { LCurly }
       '}'             { RCurly }
       ','             { Comma }
-      '-'             { Minus }
-      '+'             { Plus }
+      '-'             { Sym '-' }
+      '+'             { Sym '+' }
       '<'             { Sym '<' }
 
 %right in
