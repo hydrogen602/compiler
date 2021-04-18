@@ -23,11 +23,17 @@ generateDataLine (AsmFunc name code) =
     
     -- lw          $ra, 0($sp)
     -- addi        $sp, $sp, 4
-    let sp = Instruction "addi" ["$sp", "$sp", "-4"]
-        sw = Instruction "sw" ["$ra", "0($sp)"]
-        lw = Instruction  "lw" ["$ra", "0($sp)"]
-        spEnd = Instruction "addi" ["$sp", "$sp", "4"]
-        lines = (EmptyLine:Label name:sp:sw:EmptyLine:code) ++ EmptyLine:lw:spEnd:[Instruction "jr" ["$ra"], EmptyLine]
+    let registers = "$ra":allSRegisters
+        memSpace = 4 * length registers
+
+        regWithMemOffset = zip registers [0,4..]
+        
+        sp = Instruction "addi" ["$sp", "$sp", show $ -memSpace]
+        sw = map (\(reg, offset) -> Instruction "sw" [reg, show offset ++ "($sp)"]) regWithMemOffset
+
+        lw = map (\(reg, offset) -> Instruction "lw" [reg, show offset ++ "($sp)"]) regWithMemOffset
+        spEnd = Instruction "addi" ["$sp", "$sp", show memSpace]
+        lines = EmptyLine:Label name:sp:sw ++ EmptyLine:code ++ EmptyLine:lw ++ spEnd:[Instruction "jr" ["$ra"], EmptyLine]
     in  intercalate "\n" (map generateLine lines)
 
 generateLine :: Line -> String

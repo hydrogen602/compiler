@@ -1,9 +1,8 @@
 module Variable where
 
 import Debug.Trace
+import Util
 
-type TmpReg = String
-type SReg = String
 
 data VariableTracker = VariableTracker {
     table :: [RegisterAssignment], 
@@ -16,10 +15,6 @@ data RegisterAssignment =
     Unassigned SReg
     deriving Show
 
-
-
-allSRegisters :: [SReg]
-allSRegisters = ["$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7"]
 
 newVarTracker :: [String] -> VariableTracker
 newVarTracker dataLabels = VariableTracker { table=map Unassigned allSRegisters, stringLabels=dataLabels }

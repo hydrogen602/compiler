@@ -2,11 +2,18 @@ module Util where
 import Data
 import Data.List
 
-generateTmpReg :: Int -> String 
+type SReg = String
+type TmpReg = String
+
+
+generateTmpReg :: Int -> TmpReg 
 generateTmpReg n = "$t" ++ if n >= 0 && n < 10 then show n else error "Ran out of temporary registers"
 
-tmpRegs :: [String]
+tmpRegs :: [TmpReg]
 tmpRegs = map (\n -> "$t" ++ show n) [0..9]
+
+allSRegisters :: [SReg]
+allSRegisters = ["$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7"]
 
 printLabel :: String
 printLabel = "_printLn"
