@@ -63,6 +63,7 @@ Stmt    : let var '=' Expr                         { LetStmt $2 $4 }
         | print Expr                               { PrintStmt False $2 }
         | if Expr '{' Block '}' ElseP              { IfStmt $2 $4 $6 }
         | while Expr '{' Block '}'                 { WhileStmt $2 $4 }
+        | var '(' ')'                              { FuncCall $1 }
 
 ElseP   : else '{' Block '}'                       { $3 }
         | {- Empty -}                              { [] }

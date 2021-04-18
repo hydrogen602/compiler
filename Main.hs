@@ -143,6 +143,9 @@ translator = --pref statements =
 
             in (ifCondition ++ innerBlock ++ [Instruction "j" [loopLabel], EmptyLine, Label endLabel], varTable, num+1)-- increment num cause we just made some labels with that num
 
+        translate prefix num (FuncCall name) varTable =
+            ([Instruction "jal" [name]], varTable, num)
+
         translate _ _ stmt _ = error $ "Failed on the statement: " ++ show stmt
 
 

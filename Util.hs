@@ -50,3 +50,12 @@ ddot = (.) . (.)
 
 dddot :: (b -> c) -> (a1 -> a2 -> a3 -> b) -> a1 -> a2 -> a3 -> c
 dddot = (.) . (.) . (.)
+
+filterBoth :: (a -> Bool) -> [a] -> ([a], [a])
+filterBoth func ls =
+    (filter func ls, filter (not . func) ls) 
+
+mapTup :: (a -> b) -> ([a], [a]) -> ([b], [b])
+mapTup func (ls1, ls2) =
+    (map func ls1, map func ls2)
+

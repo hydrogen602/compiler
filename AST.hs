@@ -5,6 +5,7 @@ data Stmt =
       | AssignStmt String Expr
       | PrintStmt Bool Expr
       | PrintLiteralStmt Bool String
+      | FuncCall String
       | IfStmt Expr [Stmt] [Stmt]
       | WhileStmt Expr [Stmt]
       deriving Show

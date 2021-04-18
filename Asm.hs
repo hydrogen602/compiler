@@ -18,7 +18,16 @@ generateDataLine (AsmString name value) =
         padding = concat $ replicate padNum " "
     in name ++ ":" ++ padding ++ ".asciiz     \"" ++ value ++ "\""
 generateDataLine (AsmFunc name code) =
-    let lines = (EmptyLine:Label name:code) ++ [EmptyLine] 
+    -- addi        $sp, $sp, -4
+    -- sw          $ra, 0($sp)
+    
+    -- lw          $ra, 0($sp)
+    -- addi        $sp, $sp, 4
+    let sp = Instruction "addi" ["$sp", "$sp", "-4"]
+        sw = Instruction "sw" ["$ra", "0($sp)"]
+        lw = Instruction  "lw" ["$ra", "0($sp)"]
+        spEnd = Instruction "addi" ["$sp", "$sp", "4"]
+        lines = (EmptyLine:Label name:sp:sw:EmptyLine:code) ++ EmptyLine:lw:spEnd:[Instruction "jr" ["$ra"], EmptyLine]
     in  intercalate "\n" (map generateLine lines)
 
 generateLine :: Line -> String
@@ -56,9 +65,16 @@ generateText (lines, aData) =
     let includePrintNL = elem (unpackLs1 printNewLineCall) lines
         includes = if includePrintNL then printNewLineCode else []
 
-        allLines = header ++ lines ++ footer ++ includes ++ [EmptyLine, Instruction ".data" []]
+        allLines = header ++ lines ++ footer ++ includes ++ [EmptyLine]
         text = intercalate "\n" (map generateLine allLines)
-        textData = intercalate "\n" (map generateDataLine aData)
+
+        helper :: AsmData -> Bool
+        helper (AsmFunc _ _) = True
+        helper _ = False
+
+        --[Instruction ".data" []]
+        (funcs, other) = mapTup generateDataLine $ filterBoth helper aData
+        textData = intercalate "\n" $ funcs ++ map generateLine [EmptyLine, Instruction ".data" []] ++ other
 
     in text ++ "\n" ++ textData
 
