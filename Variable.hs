@@ -7,8 +7,7 @@ type SReg = String
 
 data VariableTracker = VariableTracker {
     table :: [RegisterAssignment], 
-    stringLabels :: [String], 
-    ifLabelId :: Int
+    stringLabels :: [String]
     }
     --([RegisterAssignment], [String], Int) -- variables (registers) & string data labels & if label ids
 
@@ -23,10 +22,7 @@ allSRegisters :: [SReg]
 allSRegisters = ["$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7"]
 
 newVarTracker :: [String] -> VariableTracker
-newVarTracker dataLabels = VariableTracker { table=map Unassigned allSRegisters, stringLabels=dataLabels, ifLabelId=0 }
-
-newVarTrackerWithId :: [String] -> Int -> VariableTracker
-newVarTrackerWithId dataLabels n = VariableTracker { table=map Unassigned allSRegisters, stringLabels=dataLabels, ifLabelId=n }
+newVarTracker dataLabels = VariableTracker { table=map Unassigned allSRegisters, stringLabels=dataLabels }
 
 assignNewVar :: VariableTracker -> String -> VariableTracker
 assignNewVar varTrack name = 
@@ -36,7 +32,7 @@ assignNewVar varTrack name =
         findFreeAndAssign (Unassigned reg:ls) = Assigned reg name:ls
 
         newAssigns = findFreeAndAssign $ table varTrack
-    in VariableTracker{table=newAssigns, stringLabels=stringLabels varTrack, ifLabelId=ifLabelId varTrack} 
+    in VariableTracker{table=newAssigns, stringLabels=stringLabels varTrack} 
 
 getRegisterMaybe :: String -> VariableTracker -> Maybe SReg 
 getRegisterMaybe name VariableTracker{table=vars} =
@@ -53,11 +49,3 @@ getRegister name varTable =
     case getRegisterMaybe name varTable of
         (Just s) -> s
         Nothing -> error $ "Cannot find variable: " ++ name
-
-addToIfLabelId :: VariableTracker -> Int -> VariableTracker
-addToIfLabelId VariableTracker{table=table, stringLabels=strL, ifLabelId=ifL} n =
-    VariableTracker{table=table, stringLabels=strL, ifLabelId=ifL + n}
-
-setToIfLabelId :: VariableTracker -> Int -> VariableTracker
-setToIfLabelId VariableTracker{table=table, stringLabels=strL} n =
-    VariableTracker{table=table, stringLabels=strL, ifLabelId=n}
