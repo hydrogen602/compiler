@@ -11,11 +11,12 @@ data Stmt =
       deriving Show
 
 data ConstStmt =
-    CStmtStr String String | -- var, string
-    CFunc String [Stmt] -- name, code
+    CStmtStr String String -- var, string
     deriving Show
 
-type AST = ([ConstStmt], [Stmt])
+data Function = CFunc String [Stmt] deriving Show -- name, code
+
+type AST = ([ConstStmt], [Function], [Stmt])
 
 data Expr = 
     Variabl String | 

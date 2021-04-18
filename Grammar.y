@@ -47,10 +47,10 @@ import Debug.Trace
 %%
 
 Start   : CStmt '\n' Start                         { startHelper ($1) ($3) }
-        | Block                                    { ([], ($1)) }
+        | Block                                    { ([], [], ($1)) }
 
-CStmt   : const var '=' str                        { CStmtStr $2 $4 }
-        | def var '(' ')' '{' Block '}'            { CFunc $2 $6 }
+CStmt   : const var '=' str                        { Left $ CStmtStr $2 $4 }
+        | def var '(' ')' '{' Block '}'            { Right $ CFunc $2 $6 }
 
 Block   : Stmt '\n' Block                          { ($1):($3) }
         | {- Empty -}                              { [] }
@@ -82,6 +82,7 @@ parseError tok = error $ "Parse error " ++ show tok
 parser :: String -> AST
 parser s = let x = lexThis s in calc (trace (show x) x)
 
-startHelper :: ConstStmt -> AST -> AST
-startHelper c (consts, stmts) = (c:consts, stmts)
+startHelper :: Either ConstStmt Function -> AST -> AST
+startHelper (Left c) (consts, funcs, stmts) = (c:consts, funcs, stmts)
+startHelper (Right f) (consts, funcs, stmts) = (consts, f:funcs, stmts)
 }

@@ -7,7 +7,7 @@ import Util
 data VariableTracker = VariableTracker {
     table :: [RegisterAssignment], 
     stringLabels :: [String]
-    }
+    } deriving Show
     --([RegisterAssignment], [String], Int) -- variables (registers) & string data labels & if label ids
 
 data RegisterAssignment = 
@@ -18,6 +18,10 @@ data RegisterAssignment =
 
 newVarTracker :: [String] -> VariableTracker
 newVarTracker dataLabels = VariableTracker { table=map Unassigned allSRegisters, stringLabels=dataLabels }
+
+addStringLabel :: VariableTracker -> String -> VariableTracker
+addStringLabel varTrack name =
+    VariableTracker{table=table varTrack, stringLabels=name:stringLabels varTrack}
 
 assignNewVar :: VariableTracker -> String -> VariableTracker
 assignNewVar varTrack name = 
