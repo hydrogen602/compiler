@@ -10,6 +10,8 @@ import Data
 import Variable
 import Debug.Trace
 
+type LabelPrefix = String
+
 
 asmDoStuffToRegisters :: Char -> (String -> String -> String -> [Line])
 asmDoStuffToRegisters '+' = asmAddRegisters
@@ -62,8 +64,8 @@ expressionSetReg :: String -> Expr -> VariableTracker -> [Line]
 expressionSetReg s expr varTable = fst $ expressionEvalHelper (s:tmpRegs) expr varTable
 
 
-translate :: Stmt -> VariableTracker -> ([Line], VariableTracker)
-translate (LetStmt name val) varTable = trace ("let stmt! name = " ++ name) $
+translate :: LabelPrefix -> Int -> Stmt -> VariableTracker -> ([Line], VariableTracker, Int)
+translate _ num (LetStmt name val) varTable = trace ("let stmt! name = " ++ name) $
     let varTableNew = assignNewVar varTable name
         register = getRegister name varTableNew
     in (case val of
@@ -71,39 +73,41 @@ translate (LetStmt name val) varTable = trace ("let stmt! name = " ++ name) $
             (Immediate n) -> asmSetToImmediate register n
             expr@(Expr sym e1 e2) -> 
                 let code = expressionSetReg register expr varTableNew
-                in code, varTableNew)
+                in code, varTableNew, num)
 
-translate (AssignStmt name val) varTable = 
+translate _ num (AssignStmt name val) varTable = 
     let register = getRegister name varTable
     in (case val of
             (Variabl v) -> asmSetToRegister register (getRegister v varTable)
             (Immediate n) -> asmSetToImmediate register n
             expr@(Expr sym e1 e2) -> 
                 let code = expressionSetReg register expr varTable
-                in code, varTable)
+                in code, varTable, num)
 
-translate (PrintStmt withNL (Variabl name)) varTable@VariableTracker{table=vars, stringLabels=labels} = 
+translate _ num (PrintStmt withNL (Variabl name)) varTable@VariableTracker{table=vars, stringLabels=labels} = 
     ((case getRegisterMaybe name varTable of
         (Just register) -> asmPrintReg register
         Nothing -> 
             if name `elem` labels then asmPrintConstStr name 
             else error $ "Cannot find variable: " ++ name
 
-    ) ++ if withNL then printNewLineCall else [], varTable)
+    ) ++ if withNL then printNewLineCall else [], varTable, num)
 
 
-translate (PrintStmt withNL (Immediate n)) varTable = (asmPrintInt n ++ if withNL then printNewLineCall else [], varTable)
+translate _ num (PrintStmt withNL (Immediate n)) varTable = (asmPrintInt n ++ if withNL then printNewLineCall else [], varTable, num)
 
-translate (PrintStmt withNL expr) varTable = 
+translate _ num (PrintStmt withNL expr) varTable = 
     (let (code, reg) = expressionEval expr varTable
-    in code ++ asmPrintReg reg ++ if withNL then printNewLineCall else [], varTable)
+    in code ++ asmPrintReg reg ++ if withNL then printNewLineCall else [], varTable, num)
 
-translate (IfStmt expr block elseBlock) varTable@VariableTracker{table=vars, stringLabels=labels, ifLabelId=ifLabelNum} = 
-    let ifLabel = "if_end_" ++ show ifLabelNum -- jump after if block
-        elseLabel = "else_end_" ++ show ifLabelNum -- jump after else block
-        
+translate prefix num (IfStmt expr block elseBlock) varTable@VariableTracker{table=vars, stringLabels=labels} = 
+    let ifLabel = "if_end_" ++ prefix ++ '_':show num -- jump after if block
+        elseLabel = "else_end_" ++ prefix ++ '_':show num -- jump after else block
+
+        innerPrefix = (prefix ++ "_" ++ show num)
+
         (conditionCode, conditionReg) = expressionEval expr varTable
-        (innerBlock, VariableTracker{ifLabelId=newIfLabelId}) = translator block (addToIfLabelId varTable 1)
+        (innerBlock, _) = translator innerPrefix block varTable
 
         ifCondition = EmptyLine:conditionCode ++ [Instruction "beq" [conditionReg, "$0", ifLabel]]
         afterIfBlock = [
@@ -111,38 +115,44 @@ translate (IfStmt expr block elseBlock) varTable@VariableTracker{table=vars, str
             Label ifLabel
             ]
         
-        (code, finalIfLabelId) = case elseBlock of
-            [] -> (ifCondition ++ innerBlock ++ afterIfBlock, newIfLabelId)
+        code = case elseBlock of
+            [] -> ifCondition ++ innerBlock ++ afterIfBlock
             block -> 
-                let (innerElseBlock, VariableTracker{ifLabelId=postElseLabelId}) = translator elseBlock (setToIfLabelId varTable newIfLabelId)
+                let (innerElseBlock, _) = translator innerPrefix elseBlock varTable
                     afterElseBlock = [EmptyLine, Label elseLabel]
-                in (ifCondition ++ innerBlock ++ [Instruction "j" [elseLabel]] ++ afterIfBlock ++ innerElseBlock ++ afterElseBlock, postElseLabelId)
+                in (ifCondition ++ innerBlock ++ [Instruction "j" [elseLabel]] ++ afterIfBlock ++ innerElseBlock ++ afterElseBlock)
         
         
-    in (code, setToIfLabelId varTable finalIfLabelId) -- not passing varTableNew because scope
+    in (code, varTable, num+1) -- not passing varTableNew because scope
+    -- increment num cause we just made some labels with that num
 
-translate (PrintLiteralStmt _ _) _ = error "Failed: PrintLiteralStmt should not appear in translate"
+translate _ _ (PrintLiteralStmt _ _) _ = error "Failed: PrintLiteralStmt should not appear in translate"
 
-translate (WhileStmt expr block) varTable@VariableTracker{table=vars, stringLabels=labels, ifLabelId=ifLabelNum} =
-    let loopLabel = "while_loop_" ++ show ifLabelNum
-        endLabel = "while_end_" ++ show ifLabelNum
+translate prefix num (WhileStmt expr block) varTable@VariableTracker{table=vars, stringLabels=labels} =
+    let loopLabel = "while_loop_" ++ prefix ++ '_':show num
+        endLabel = "while_end_" ++ prefix ++ '_':show num
+
+        innerPrefix = (prefix ++ "_" ++ show num)
 
         (conditionCode, conditionReg) = expressionEval expr varTable
-        (innerBlock, VariableTracker{ifLabelId=newIfLabelId}) = translator block (addToIfLabelId varTable 1)
+        (innerBlock, VariableTracker{ifLabelId=newIfLabelId}) = translator innerPrefix block varTable
 
         ifCondition = EmptyLine:Label loopLabel:conditionCode ++ [Instruction "beq" [conditionReg, "$0", endLabel]]
 
-    in (ifCondition ++ innerBlock ++ [Instruction "j" [loopLabel], EmptyLine, Label endLabel], setToIfLabelId varTable newIfLabelId)
+    in (ifCondition ++ innerBlock ++ [Instruction "j" [loopLabel], EmptyLine, Label endLabel], varTable, num+1)-- increment num cause we just made some labels with that num
 
-translate stmt varTable = error $ "Failed on the statement: " ++ show stmt
+translate _ _ stmt _ = error $ "Failed on the statement: " ++ show stmt
 
 
-translator :: [Stmt] -> VariableTracker -> ([Line], VariableTracker)
-translator [] varTable = ([], varTable)
-translator (st:ls) varTable = --traceShow st $
-    let (code, varTableNew) = translate st varTable
-        (codeLater, varTableLater) = translator ls varTableNew
-    in (code ++ codeLater, varTableLater)
+translator :: LabelPrefix -> [Stmt] -> VariableTracker -> ([Line], VariableTracker)
+translator = --pref statements =
+    let translatorHelper :: Int -> LabelPrefix -> [Stmt] -> VariableTracker -> ([Line], VariableTracker, Int)
+        translatorHelper num prefix [] varTable = ([], varTable, num)
+        translatorHelper num prefix (st:ls) varTable = --traceShow st $
+            let (code, varTableNew, numNew) = translate prefix num st varTable
+                (codeLater, varTableLater, numLast) = translatorHelper numNew prefix ls varTableNew
+            in (code ++ codeLater, varTableLater, numLast)
+    in removeLastOf3Tup `dddot` translatorHelper 0 --pref statements
 
 
 
@@ -170,7 +180,7 @@ translateData (CFunc name block:ls) varTable
     | otherwise = --(AsmString name value:aData, name:labels)
         let --printLiteralProcessor 
             --AsmFunc name ([Line])
-            (code, varTableFinal) = translator block (newVarTrackerWithId (stringLabels varTable) (ifLabelId varTable))
+            (code, varTableFinal) = translator name block (newVarTrackerWithId (stringLabels varTable) (ifLabelId varTable))
         in (AsmFunc name code:aData, name:labels, setToIfLabelId varTableFinal (ifLabelId varTableFinal))
     where (aData, labels, varTableNew) = translateData ls varTable
 
@@ -257,7 +267,7 @@ main = do
     let (asmData, dataLabels, varTable) = translateData consts (newVarTracker dataLabels)
 
     --let registerTable = registerAssign ast dataLabels
-        (asm, table) = translator ast varTable
+        (asm, table) = translator "" ast varTable
 
     print asmData
     let out = generateText (asm, asmData)

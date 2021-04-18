@@ -1,9 +1,9 @@
 const hi = "Hello World!"
 --const yIs = "y = "
 
-def f() {
-    println 42
-}
+--def f() {
+--    println 42
+--}
 
 --let x = 5
 --let y = 0
@@ -25,6 +25,7 @@ let c = 10
 if c < 5 {}
 println c
 
+println hi
 
 --if y {
 --print yIs

@@ -40,3 +40,13 @@ argumentExtract _ [_] = Nothing
 argumentExtract name (e:arg:args)
     | name == e = Just arg 
     | otherwise = argumentExtract name args
+
+
+removeLastOf3Tup :: (a, b, c) -> (a, b)
+removeLastOf3Tup (a, b, c) = (a, b)
+
+ddot :: (b -> c) -> (a1 -> a2 -> b) -> a1 -> a2 -> c
+ddot = (.) . (.)
+
+dddot :: (b -> c) -> (a1 -> a2 -> a3 -> b) -> a1 -> a2 -> a3 -> c
+dddot = (.) . (.) . (.)
