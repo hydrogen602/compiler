@@ -43,10 +43,10 @@ expressionEvalHelper (tmp:tmpRegLs) (Expr sym (Variabl s) e) varTable = trace ("
         codeAdd = asmDoStuffToRegisters sym tmp register reg
     in (code ++ codeAdd, tmp)
 
-expressionEvalHelper tmpRegLs@(tmp:_) (Expr sym (Immediate v) e) varTable = --trace ("immediate = " ++ show v) $
-    let (code, reg) = expressionEvalHelper tmpRegLs e varTable
-        (codeAdd, regOut) = (asmDoStuffImmediate sym tmp reg v, tmp)
-    in  (code ++ codeAdd, regOut)
+-- expressionEvalHelper tmpRegLs@(tmp:_) (Expr sym (Immediate v) e) varTable = --trace ("immediate = " ++ show v) $
+--     let (code, reg) = expressionEvalHelper tmpRegLs e varTable
+--         (codeAdd, regOut) = (asmDoStuffImmediate sym tmp reg v, tmp)
+--     in  (code ++ codeAdd, regOut)
 
 expressionEvalHelper (tmp:tmpRegLs) (Expr sym e1 e2) varTable = --trace "general expr eval helper" $
     let (code1, reg1) = expressionEvalHelper (tmp:tmpRegLs) e1 varTable
@@ -54,6 +54,11 @@ expressionEvalHelper (tmp:tmpRegLs) (Expr sym e1 e2) varTable = --trace "general
         set2 = asmDoStuffToRegisters sym tmp reg1 reg2 -- bug probably?
     in (concat [code1, code2, set2], tmp)
 
+expressionEvalHelper (tmp:tmpRegLs) (FuncExpr fName givenArgs) varTable =
+    let codeRegPairs = concat $ zipWith (\argExpr argReg -> expressionSetReg argReg argExpr varTable) givenArgs allARegisters 
+        
+        fetch = asmSetToRegister tmp "$v0"
+    in (codeRegPairs ++ (Instruction "jal" [fName]:fetch), tmp)
 
 expressionEvalHelper regs expr varTable = error $ "Expression not dealt with: expr = " ++ show expr
 
@@ -61,30 +66,22 @@ expressionEval :: Expr -> VariableTracker -> ([Line], String)
 expressionEval = expressionEvalHelper allTRegisters
 
 expressionSetReg :: String -> Expr -> VariableTracker -> [Line]
+expressionSetReg s (Variabl v) varTable = asmSetToRegister s (getRegister v varTable)
+expressionSetReg s (Immediate n) varTable = asmSetToImmediate s n
 expressionSetReg s expr varTable = fst $ expressionEvalHelper (s:allTRegisters) expr varTable
 
 
 translator :: LabelPrefix -> [Stmt] -> VariableTracker -> ([Line], VariableTracker)
 translator = --pref statements =
     let translate :: LabelPrefix -> Int -> Stmt -> VariableTracker -> ([Line], VariableTracker, Int)
-        translate _ num (LetStmt name val) varTable = trace ("let stmt! name = " ++ name) $
+        translate _ num (LetStmt name expr) varTable = trace ("let stmt! name = " ++ name) $
             let varTableNew = assignNewVar varTable name
                 register = getRegister name varTableNew
-            in (case val of
-                    (Variabl v) -> asmSetToRegister register (getRegister v varTableNew)
-                    (Immediate n) -> asmSetToImmediate register n
-                    expr@(Expr sym e1 e2) -> 
-                        let code = expressionSetReg register expr varTableNew
-                        in code, varTableNew, num)
+            in (expressionSetReg register expr varTableNew, varTableNew, num)
 
-        translate _ num (AssignStmt name val) varTable = 
+        translate _ num (AssignStmt name expr) varTable = 
             let register = getRegister name varTable
-            in (case val of
-                    (Variabl v) -> asmSetToRegister register (getRegister v varTable)
-                    (Immediate n) -> asmSetToImmediate register n
-                    expr@(Expr sym e1 e2) -> 
-                        let code = expressionSetReg register expr varTable
-                        in code, varTable, num)
+            in (expressionSetReg register expr varTable, varTable, num)
 
         translate _ num (PrintStmt withNL (Variabl name)) varTable@VariableTracker{table=vars, stringLabels=labels} = 
             ((case getRegisterMaybe name varTable of
@@ -143,8 +140,15 @@ translator = --pref statements =
 
             in (ifCondition ++ innerBlock ++ [Instruction "j" [loopLabel], EmptyLine, Label endLabel], varTable, num+1)-- increment num cause we just made some labels with that num
 
-        translate prefix num (FuncCall name) varTable =
-            ([Instruction "jal" [name]], varTable, num)
+        translate prefix num (FuncCall name givenArgs) varTable =
+            let codeRegPairs = concat $ zipWith (\argExpr argReg -> expressionSetReg argReg argExpr varTable) givenArgs allARegisters 
+                --varMoves = concat $ zipWith (\arg aReg -> asmSetToRegister aReg (getRegister arg varTable)) givenArgs allARegisters
+
+            in (codeRegPairs ++ [Instruction "jal" [name]], varTable, num)
+        
+        translate prefix num (ReturnStmt var) varTable =
+            let m = asmSetToRegister "$v0" (getRegister var varTable)
+            in (m, varTable, num)
 
         translate _ _ stmt _ = error $ "Failed on the statement: " ++ show stmt
 

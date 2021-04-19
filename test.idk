@@ -1,10 +1,11 @@
 const hi = "Hello World!"
 
 def f(a) {
-    let c = 20
-    print "c = "
-    println c
+    let doubleA = a + a
+    print "2a = "
+    println doubleA
     println a
+    return doubleA
 }
 
 let c = 10
@@ -14,6 +15,7 @@ println c
 
 println hi
 
-f()
+let x = 42
+c = f(x)
 
 println c

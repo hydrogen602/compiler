@@ -28,6 +28,7 @@ tokens :-
   "-"?$digit+				    { \s -> Integer (read s) }
   true                  { \s -> Integer 1 }
   false                 { \s -> Integer 0 }
+  return                { \s -> Return }
   \"[^\"]*\"            { strHelper }
   \(                    { \s -> LParens }
   \)                    { \s -> RParens }

@@ -5,9 +5,10 @@ data Stmt =
       | AssignStmt String Expr
       | PrintStmt Bool Expr
       | PrintLiteralStmt Bool String
-      | FuncCall String
+      | FuncCall String [Expr]
       | IfStmt Expr [Stmt] [Stmt]
       | WhileStmt Expr [Stmt]
+      | ReturnStmt String
       deriving Show
 
 data ConstStmt =
@@ -21,7 +22,8 @@ type AST = ([ConstStmt], [Function], [Stmt])
 data Expr = 
     Variabl String | 
     Immediate Int |
-    Expr Char Expr Expr
+    Expr Char Expr Expr |
+    FuncExpr String [Expr]
     deriving Show
 
 

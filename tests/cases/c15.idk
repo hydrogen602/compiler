@@ -1,0 +1,26 @@
+def fib(n) {
+    let out = 0
+    if 0 < n {
+        out = 1
+
+        if n < 2 {
+
+        } else {
+            let n1 = n + -1
+            let n2 = n + -2
+            out = fib(n1) + fib(n2)
+        }
+    }
+    return out
+}
+
+let n = 0
+while n < 17 {
+    let result = fib(n)
+    print "fib("
+    print n
+    print ") = "
+    println result
+
+    n = n + 1
+}

@@ -24,6 +24,7 @@ import Debug.Trace
       println         { Print True }
       print           { Print False }
       str             { Str $$ }
+      return          { Return }
 
       '\n'            { NewLine }
       ')'             { RParens }
@@ -50,13 +51,27 @@ Start   : CStmt '\n' Start                         { startHelper ($1) ($3) }
         | Block                                    { ([], [], ($1)) }
 
 CStmt   : const var '=' str                        { Left $ CStmtStr $2 $4 }
-        | def var '(' Args ')' '{' Block '}'       { Right $ CFunc $2 $7 $4 }
+        | def var '(' Params ')' '{' Block Return '}'       { Right $ CFunc $2 (($7)++($8)) $4 }
 
-Args    : var Args2                                { ($1):($2) }
+Return  : return var '\n'                          { [ReturnStmt $2] }
         | {- Empty -}                              { [] }
 
-Args2   : ',' var Args2                            { ($2):($3) }
+
+Params  : var Params2                                { ($1):($2) }
         | {- Empty -}                              { [] }
+
+Params2 : ',' var Params2                            { ($2):($3) }
+        | {- Empty -}                              { [] }
+
+
+Args    :: { [Expr] }
+        : Expr Args2                               { ($1):($2) }
+        | {- Empty -}                              { [] }
+
+Args2   :: { [Expr] }
+        : ',' Expr Args2                           { ($2):($3) }
+        | {- Empty -}                              { [] }
+
 
 Block   : Stmt '\n' Block                          { ($1):($3) }
         | {- Empty -}                              { [] }
@@ -69,7 +84,7 @@ Stmt    : let var '=' Expr                         { LetStmt $2 $4 }
         | print Expr                               { PrintStmt False $2 }
         | if Expr '{' Block '}' ElseP              { IfStmt $2 $4 $6 }
         | while Expr '{' Block '}'                 { WhileStmt $2 $4 }
-        | var '(' ')'                              { FuncCall $1 }
+        | var '(' Args ')'                         { FuncCall $1 $3 }
 
 ElseP   : else '{' Block '}'                       { $3 }
         | {- Empty -}                              { [] }
@@ -77,6 +92,7 @@ ElseP   : else '{' Block '}'                       { $3 }
 Expr    : Expr '+' Expr                            { Expr '+' $1 $3 }
         | Expr '<' Expr                            { Expr '<' $1 $3 }
         | Value                                    { $1 }
+        | var '(' Args ')'                         { FuncExpr $1 $3 }
 
 Value   : var                                      { Variabl $1 }
         | int                                      { Immediate $1 }
