@@ -14,7 +14,7 @@ data ConstStmt =
     CStmtStr String String -- var, string
     deriving Show
 
-data Function = CFunc String [Stmt] deriving Show -- name, code
+data Function = CFunc String [Stmt] [String] deriving Show -- name, code
 
 type AST = ([ConstStmt], [Function], [Stmt])
 

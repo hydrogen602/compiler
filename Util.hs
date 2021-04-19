@@ -4,6 +4,7 @@ import Data.List
 
 type SReg = String
 type TmpReg = String
+type AReg = String
 
 
 generateTmpReg :: Int -> TmpReg 
@@ -14,6 +15,9 @@ tmpRegs = map (\n -> "$t" ++ show n) [0..9]
 
 allSRegisters :: [SReg]
 allSRegisters = ["$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7"]
+
+allARegisters :: [AReg]
+allARegisters = map (\n -> "$a" ++ show n) [0..3]
 
 printLabel :: String
 printLabel = "_printLn"

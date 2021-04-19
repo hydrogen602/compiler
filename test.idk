@@ -1,9 +1,10 @@
 const hi = "Hello World!"
 
-def f() {
+def f(a) {
     let c = 20
     print "c = "
     println c
+    println a
 }
 
 let c = 10

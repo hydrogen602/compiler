@@ -50,7 +50,13 @@ Start   : CStmt '\n' Start                         { startHelper ($1) ($3) }
         | Block                                    { ([], [], ($1)) }
 
 CStmt   : const var '=' str                        { Left $ CStmtStr $2 $4 }
-        | def var '(' ')' '{' Block '}'            { Right $ CFunc $2 $6 }
+        | def var '(' Args ')' '{' Block '}'       { Right $ CFunc $2 $7 $4 }
+
+Args    : var Args2                                { ($1):($2) }
+        | {- Empty -}                              { [] }
+
+Args2   : ',' var Args2                            { ($2):($3) }
+        | {- Empty -}                              { [] }
 
 Block   : Stmt '\n' Block                          { ($1):($3) }
         | {- Empty -}                              { [] }
