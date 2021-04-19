@@ -3,18 +3,18 @@ import Data
 import Data.List
 
 type SReg = String
-type TmpReg = String
+type TReg = String
 type AReg = String
 
 
-generateTmpReg :: Int -> TmpReg 
+generateTmpReg :: Int -> TReg 
 generateTmpReg n = "$t" ++ if n >= 0 && n < 10 then show n else error "Ran out of temporary registers"
 
-tmpRegs :: [TmpReg]
-tmpRegs = map (\n -> "$t" ++ show n) [0..9]
+allTRegisters :: [TReg]
+allTRegisters = map (\n -> "$t" ++ show n) [0..9]
 
 allSRegisters :: [SReg]
-allSRegisters = ["$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7"]
+allSRegisters = map (\n -> "$s" ++ show n) [0..7]
 
 allARegisters :: [AReg]
 allARegisters = map (\n -> "$a" ++ show n) [0..3]

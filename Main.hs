@@ -25,7 +25,7 @@ asmDoStuffImmediate char = error $ "Unknown operator (immediate): " ++ [char]
 
 
 -- no branches in expressions!!
-expressionEvalHelper :: [TmpReg] -> Expr -> VariableTracker -> ([Line], String) -- returns lines and register where result is
+expressionEvalHelper :: [TReg] -> Expr -> VariableTracker -> ([Line], String) -- returns lines and register where result is
 expressionEvalHelper _ (Variabl s) varTable = 
     ([], getRegister s varTable)
 
@@ -58,10 +58,10 @@ expressionEvalHelper (tmp:tmpRegLs) (Expr sym e1 e2) varTable = --trace "general
 expressionEvalHelper regs expr varTable = error $ "Expression not dealt with: expr = " ++ show expr
 
 expressionEval :: Expr -> VariableTracker -> ([Line], String)
-expressionEval = expressionEvalHelper tmpRegs
+expressionEval = expressionEvalHelper allTRegisters
 
 expressionSetReg :: String -> Expr -> VariableTracker -> [Line]
-expressionSetReg s expr varTable = fst $ expressionEvalHelper (s:tmpRegs) expr varTable
+expressionSetReg s expr varTable = fst $ expressionEvalHelper (s:allTRegisters) expr varTable
 
 
 translator :: LabelPrefix -> [Stmt] -> VariableTracker -> ([Line], VariableTracker)
@@ -160,34 +160,34 @@ translator = --pref statements =
 
 --translate (ConstStmt name value) varTable = undefined 
 
-translateData :: LabelPrefix -> [ConstStmt] -> VariableTracker -> ([AsmData], VariableTracker)
-translateData _ [] varTable = ([], varTable)
+translateData :: LabelPrefix -> [ConstStmt] -> [String] -> ([AsmData], [String])
+translateData _ [] labels = ([], labels)
 translateData prefix ((CStmtStr name value):ls) varTable
     | name == "main" = error "Cannot use label main"
     | "if_end_" `isPrefixOf` name = error "Label cannot start with 'if_end_'"
     | "else_end_" `isPrefixOf` name = error "Label cannot start with 'else_end_'"
     | "while_" `isPrefixOf` name = error "Label cannot start with 'while_'"
 --    | "str_" `isPrefixOf` name = error "Label cannot start with 'str_'"
-    | name `elem` stringLabels varTableNew = error $ "Label already used: " ++ name
-    | otherwise = (AsmString name value:aData, addStringLabel varTableNew name)
-    where (aData, varTableNew) = translateData prefix ls varTable
+    | name `elem` labelsNew = error $ "Label already used: " ++ name
+    | otherwise = (AsmString name value:aData, name:labelsNew)
+    where (aData, labelsNew) = translateData prefix ls varTable
 
-translateFunc :: LabelPrefix -> [Function] -> VariableTracker -> ([AsmData], VariableTracker)
-translateFunc _ [] varTable = ([], varTable)
+translateFunc :: LabelPrefix -> [Function] -> [String] -> ([AsmData], [String])
+translateFunc _ [] labels = ([], labels)
 translateFunc prefix (CFunc name block args:ls) varTable
     | name == "main" = error "Cannot use label main"
     | "if_end_" `isPrefixOf` name = error "Label cannot start with 'if_end_'"
     | "else_end_" `isPrefixOf` name = error "Label cannot start with 'else_end_'"
     | "while_" `isPrefixOf` name = error "Label cannot start with 'while_'"
     | "str_" `isPrefixOf` name = error "Label cannot start with 'str_'"
-    | name `elem` stringLabels varTableNew = error $ "Label already used: " ++ name
+    | name `elem` labelsNew = error $ "Label already used: " ++ name
     | length args > 4 = error $ "Can only support a max of 4 arguments, got " ++ (show . length) args ++ " arguments"
     | otherwise = --(AsmString name value:aData, name:labels)
-        let varTabWithArgs = foldr (flip assignNewVar) (newVarTracker (stringLabels varTable)) args
+        let varTabWithArgs = foldr (flip assignNewVar) (newVarTracker labelsNew) args
             varMoves = concat $ zipWith (\arg aReg -> asmSetToRegister (getRegister arg varTabWithArgs) aReg) args allARegisters
-            (code, varTableFinal) = translator name block varTabWithArgs
-        in  (AsmFunc name (varMoves ++ code):aData, addStringLabel varTableFinal name)
-    where (aData, varTableNew) = translateFunc prefix ls varTable
+            (code, VariableTracker{stringLabels=labelsFinal}) = translator name block varTabWithArgs
+        in  (AsmFunc name (varMoves ++ code):aData, name:labelsFinal)
+    where (aData, labelsNew) = translateFunc prefix ls varTable
 
 
 printLiteralProcessor :: [ConstStmt] -> [Stmt] -> ([ConstStmt], [Stmt])
@@ -272,12 +272,14 @@ main = do
 
     --putStrLn (show state)
 
-    let (preAsmData, preVarTable) = translateData "" consts (newVarTracker [])
-    putStr "preVarTable = "
-    print preVarTable
-    let (asmFuncs, varTable) = translateFunc "" funcs preVarTable 
+    let (preAsmData, preLabels) = translateData "" consts []
+    putStr "preLabels = "
+    print preLabels
+    let (asmFuncs, labels) = translateFunc "" funcs preLabels 
 
         asmData = asmFuncs ++ preAsmData
+
+        varTable = newVarTracker labels
 
     putStrLn "==================================="
     print varTable

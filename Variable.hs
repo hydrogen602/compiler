@@ -23,6 +23,10 @@ addStringLabel :: VariableTracker -> String -> VariableTracker
 addStringLabel varTrack name =
     VariableTracker{table=table varTrack, stringLabels=name:stringLabels varTrack}
 
+setStringLabels :: VariableTracker -> [String] -> VariableTracker
+setStringLabels varTrack labels =
+    VariableTracker{table=table varTrack, stringLabels=labels}
+
 assignNewVar :: VariableTracker -> String -> VariableTracker
 assignNewVar varTrack name = 
     let findFreeAndAssign :: [RegisterAssignment] -> [RegisterAssignment]
