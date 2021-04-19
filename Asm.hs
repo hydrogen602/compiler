@@ -1,74 +1,69 @@
-module Asm ( 
-    generateText, asmPrintInt, asmPrintReg, 
-    asmSetToRegister, asmSetToImmediate, asmPrintConstStr, 
-    asmAddRegisters, asmAddImmediate, asmLessThanRegisters,
-    asmLessThanImmediate
-    ) where
+module Asm where
 
-import Data.List
-import AST
+import Data.List ( intercalate )
 import Data
 import Util
 
 
-generateDataLine :: AsmData -> String
-generateDataLine (AsmString name value) = 
-    let len = length name
-        padNum = max 1 (8 - 1 - len)
-        padding = concat $ replicate padNum " "
-    in name ++ ":" ++ padding ++ ".asciiz     \"" ++ value ++ "\""
-generateDataLine (AsmFunc name code) =
-    -- addi        $sp, $sp, -4
-    -- sw          $ra, 0($sp)
-    
-    -- lw          $ra, 0($sp)
-    -- addi        $sp, $sp, 4
-    let registers = "$ra":allSRegisters
-        memSpace = 4 * length registers
-
-        regWithMemOffset = zip registers [0,4..]
-        
-        sp = Instruction "addi" ["$sp", "$sp", show $ -memSpace]
-        sw = map (\(reg, offset) -> Instruction "sw" [reg, show offset ++ "($sp)"]) regWithMemOffset
-
-        lw = map (\(reg, offset) -> Instruction "lw" [reg, show offset ++ "($sp)"]) regWithMemOffset
-        spEnd = Instruction "addi" ["$sp", "$sp", show memSpace]
-        lines = EmptyLine:Label name:sp:sw ++ EmptyLine:code ++ EmptyLine:lw ++ spEnd:[Instruction "jr" ["$ra"], EmptyLine]
-    in  intercalate "\n" (map generateLine lines)
-
-generateLine :: Line -> String
-generateLine (Instruction cmd args) = 
-    let len = length cmd
-        argLine = intercalate ", " args
-
-        padNum = max 1 (12 - len)
-        padding = concat $ replicate padNum " "
-    in "        " ++ cmd ++ padding ++ argLine
-generateLine (Label name) = name ++ ":"
-generateLine EmptyLine = ""
-
-header :: [Line]
-header = [
-    Instruction ".text" [],
-    Instruction ".globl" ["main"],
-    Label "main",
-    Instruction "addi" ["$sp", "$sp", "-4"],
-    Instruction "sw" ["$ra", "0($sp)"],
-    EmptyLine
-    ]
-
-footer :: [Line]
-footer = [
-    EmptyLine,
-    Instruction "lw" ["$ra", "0($sp)"],
-    Instruction "addi" ["$sp", "$sp", "4"],
-    Instruction "jr" ["$ra"],
-    Instruction ".end" ["main"]
-    ]
-
 generateText :: ASM -> String
 generateText (lines, aData) =
-    let includePrintNL = elem (unpackLs1 printNewLineCall) lines
+    let header :: [Line]
+        header = [
+            Instruction ".text" [],
+            Instruction ".globl" ["main"],
+            Label "main",
+            Instruction "addi" ["$sp", "$sp", "-4"],
+            Instruction "sw" ["$ra", "0($sp)"],
+            EmptyLine
+            ]
+
+        footer :: [Line]
+        footer = [
+            EmptyLine,
+            Instruction "lw" ["$ra", "0($sp)"],
+            Instruction "addi" ["$sp", "$sp", "4"],
+            Instruction "jr" ["$ra"],
+            Instruction ".end" ["main"]
+            ]
+        
+        generateLine :: Line -> String
+        generateLine (Instruction cmd args) = 
+            let len = length cmd
+                argLine = intercalate ", " args
+
+                padNum = max 1 (12 - len)
+                padding = concat $ replicate padNum " "
+            in "        " ++ cmd ++ padding ++ argLine
+        generateLine (Label name) = name ++ ":"
+        generateLine EmptyLine = ""
+        
+        generateDataLine :: AsmData -> String
+        generateDataLine (AsmString name value) = 
+            let len = length name
+                padNum = max 1 (8 - 1 - len)
+                padding = concat $ replicate padNum " "
+            in name ++ ":" ++ padding ++ ".asciiz     \"" ++ value ++ "\""
+        generateDataLine (AsmFunc name code) =
+            -- addi        $sp, $sp, -4
+            -- sw          $ra, 0($sp)
+            
+            -- lw          $ra, 0($sp)
+            -- addi        $sp, $sp, 4
+            let registers = "$ra":allSRegisters
+                memSpace = 4 * length registers
+
+                regWithMemOffset = zip registers [0,4..]
+
+                sp = Instruction "addi" ["$sp", "$sp", show $ -memSpace]
+                sw = map (\(reg, offset) -> Instruction "sw" [reg, show offset ++ "($sp)"]) regWithMemOffset
+
+                lw = map (\(reg, offset) -> Instruction "lw" [reg, show offset ++ "($sp)"]) regWithMemOffset
+                spEnd = Instruction "addi" ["$sp", "$sp", show memSpace]
+                lines = EmptyLine:Label name:sp:sw ++ EmptyLine:code ++ EmptyLine:lw ++ spEnd:[Instruction "jr" ["$ra"], EmptyLine]
+            in  intercalate "\n" (map generateLine lines)
+
+
+        includePrintNL = elem (unpackLs1 printNewLineCall) lines
         includes = if includePrintNL then printNewLineCode else []
 
         allLines = header ++ lines ++ footer ++ includes ++ [EmptyLine]
