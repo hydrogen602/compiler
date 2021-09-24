@@ -25,12 +25,19 @@ def case_helper(test):
     else:
         #print(compileResult.stderr.decode())
         if compileResult != 0: print(test, cases)
+
+        if compileResult.returncode != 0:
+            print(compileResult.stderr)
         compileResult.check_returncode()
 
         result = subprocess.run(['spim', '-file', f'tests/out/{test}.s'], capture_output=True)
         result.check_returncode()
 
-        output = result.stdout.decode().split('Loaded: /usr/lib/spim/exceptions.s\n', maxsplit=1)[1]
+        output = result.stdout.decode()
+        if 'Loaded: /usr/lib/spim/exceptions.s' in output:
+            output = output.split('Loaded: /usr/lib/spim/exceptions.s\n', maxsplit=1)[1]
+        if 'Loaded: /usr/local/Cellar/spim/9.1.22/share/exceptions.s' in output:
+             output = output.split('Loaded: /usr/local/Cellar/spim/9.1.22/share/exceptions.s\n', maxsplit=1)[1]
 
         with open(pathToCase + '.result.txt') as f:
             solution = f.read()

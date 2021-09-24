@@ -37,6 +37,7 @@ printNewLineCall = [Instruction "jal" [printLabel]]
 
 unpackLs1 :: [a] -> a
 unpackLs1 [x] = x
+unpackLs1 _ = error "Expected one element in list"
 
 -- containsSubList :: (Eq a) => [a] -> [a] -> Bool 
 -- containsSubList [] _ = True
