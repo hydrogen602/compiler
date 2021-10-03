@@ -1,5 +1,6 @@
 
 import Data.Char
+import Control.Monad.State  
 import Data.List
 import System.Environment ( getArgs )
 import Grammar
@@ -150,7 +151,7 @@ translator = --pref statements =
             let m = asmSetToRegister "$v0" (getRegister var varTable)
             in (m, varTable, num)
 
-        translate _ _ stmt _ = error $ "Failed on the statement: " ++ show stmt
+        -- translate _ _ stmt _ = error $ "Failed on the statement: " ++ show stmt
 
 
         translatorHelper :: Int -> LabelPrefix -> [Stmt] -> VariableTracker -> ([Line], VariableTracker, Int)
@@ -194,48 +195,45 @@ translateFunc prefix (CFunc name block args:ls) varTable
     where (aData, labelsNew) = translateFunc prefix ls varTable
 
 
-printLiteralProcessor :: [ConstStmt] -> [Stmt] -> ([ConstStmt], [Stmt])
-printLiteralProcessor consts [] = (consts, [])
-printLiteralProcessor consts (st:stmts) =
-    let printLiteralHelper :: [ConstStmt] -> Stmt -> ([ConstStmt], Stmt)
+printLiteralHelper :: Stmt -> State [ConstStmt] Stmt
+printLiteralHelper (IfStmt expr ifBlock elseBlock) = do
+    ifAst <- printLiteralProcessor ifBlock
+    elseAst <- printLiteralProcessor elseBlock
+    return (IfStmt expr ifAst elseAst)
 
-        printLiteralHelper consts (IfStmt expr ifBlock elseBlock) =
-            let (ifConsts, ifAst) = printLiteralProcessor consts ifBlock
-                (elseConsts, elseAst) = printLiteralProcessor ifConsts elseBlock
-                --(IfAst, IfConsts)
-            in  (elseConsts, IfStmt expr ifAst elseAst)  -- (stmt:ast, consts)
+printLiteralHelper (WhileStmt expr block) = do
+    whileAst <- printLiteralProcessor block
+    return (WhileStmt expr whileAst)
 
-        printLiteralHelper consts (WhileStmt expr block) =
-            let (whileConsts, whileAst) = printLiteralProcessor consts block
-            in  (whileConsts, WhileStmt expr whileAst)
+printLiteralHelper (PrintLiteralStmt nl s) = state (\consts ->
+    let existsAlready :: [ConstStmt] -> Maybe String
+        existsAlready [] = Nothing  
+        existsAlready (CStmtStr labelName str:ls) =
+            if str == s then Just labelName
+            else existsAlready ls
 
-        printLiteralHelper consts (PrintLiteralStmt nl s) = 
-            let existsAlready :: [ConstStmt] -> Maybe String
-                existsAlready [] = Nothing  
-                existsAlready (CStmtStr labelName str:ls) =
-                    if str == s then Just labelName
-                    else existsAlready ls
-                --existsAlready (_:ls) = existsAlready ls -- ???
+        findFreeLabel :: [ConstStmt] -> Int
+        findFreeLabel [] = 0
+        findFreeLabel (CStmtStr ('s':'t':'r':'_':num) _:ls) =
+            let n = 1 + read num :: Int
+            in max n (findFreeLabel ls)
+        findFreeLabel (_:ls) = findFreeLabel ls
 
-                findFreeLabel :: [ConstStmt] -> Int
-                findFreeLabel [] = 0
-                findFreeLabel (CStmtStr ('s':'t':'r':'_':num) _:ls) =
-                    let n = 1 + read num :: Int
-                    in max n (findFreeLabel ls)
-                findFreeLabel (_:ls) = findFreeLabel ls
+    in case existsAlready consts of 
+        (Just label) -> (PrintStmt nl (Variabl label), consts) 
+        Nothing -> 
+            let label = "str_" ++ show (findFreeLabel consts)
+            in  (PrintStmt nl (Variabl label), CStmtStr label s:consts))
 
-            in case existsAlready consts of 
-                (Just label) -> (consts, PrintStmt nl (Variabl label)) 
-                Nothing -> 
-                    let label = "str_" ++ show (findFreeLabel consts)
-                    in (CStmtStr label s:consts, PrintStmt nl (Variabl label))
-
-        printLiteralHelper consts st = (consts, st)
+printLiteralHelper ls = state (\st -> (ls, st))
 
 
-        (constsNew, stNew) = printLiteralHelper consts st
-        (constsFinal, stmtsFinal) = printLiteralProcessor constsNew stmts
-    in (constsFinal, stNew:stmtsFinal)
+printLiteralProcessor :: [Stmt] -> State [ConstStmt] [Stmt]
+printLiteralProcessor [] = state (\st -> ([], st))
+printLiteralProcessor (st:stmts) = do
+    stNew <- printLiteralHelper st
+    stmtsFinal <- printLiteralProcessor stmts
+    return (stNew:stmtsFinal)
 
 
 main :: IO ()
@@ -250,22 +248,19 @@ main = do
             (Just outFile) -> outFile
             Nothing -> "out.s"
 
-
         funcHelper :: [ConstStmt] -> [Function] -> ([ConstStmt], [Function])
         funcHelper consts [] = (consts, [])
         funcHelper consts ((CFunc name stmts args):funcs) = 
             let (postConsts, postFuncs) = funcHelper consts funcs
-                (finalConsts, finalStmts) = printLiteralProcessor postConsts stmts
+                (finalStmts, finalConsts) = runState (printLiteralProcessor stmts) postConsts
+                    --printLiteralProcessor postConsts stmts
 
             in  (finalConsts, CFunc name finalStmts args:postFuncs) 
 
-
         (preConsts, preFuncs, preAst) = parser (s ++ "\n")
-        (pre1consts, ast) = printLiteralProcessor preConsts preAst
+        (ast, pre1consts) = runState (printLiteralProcessor preAst) preConsts
+            --printLiteralProcessor preConsts preAst
         (consts, funcs) = funcHelper pre1consts preFuncs
-
-
-
 
     putStr "consts = "
     print consts

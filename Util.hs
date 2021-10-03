@@ -71,3 +71,5 @@ mapTup :: (a -> b) -> ([a], [a]) -> ([b], [b])
 mapTup func (ls1, ls2) =
     (map func ls1, map func ls2)
 
+stateHelper :: b -> (a -> (b, a))
+stateHelper b st = (b, st)
