@@ -1,5 +1,7 @@
 module Util where
 import Data
+
+import Control.Monad.State  
 import Data.List
 
 type SReg = String
@@ -56,6 +58,9 @@ argumentExtract name (e:arg:args)
 
 removeLastOf3Tup :: (a, b, c) -> (a, b)
 removeLastOf3Tup (a, b, c) = (a, b)
+
+putAndReturn :: MonadState s m => s -> b -> m b
+putAndReturn st re = put st >> return re
 
 ddot :: (b -> c) -> (a1 -> a2 -> b) -> a1 -> a2 -> c
 ddot = (.) . (.)

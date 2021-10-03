@@ -77,32 +77,35 @@ translator pref stmts = --pref statements =
     let translate :: LabelPrefix -> Stmt -> State (VariableTracker, Int) [Line]
         translate _ (LetStmt name expr) = do
             assignNewVar2 name
-            (varTableNew, n) <- get
+            (varTableNew, _) <- get
             let register = getRegister name varTableNew
 
             return (expressionSetReg register expr varTableNew)
 
-        translate _ (AssignStmt name expr) = state $ \(varTable, num) -> 
+        translate _ (AssignStmt name expr) = do
+            (varTable, _) <- get
             let register = getRegister name varTable
-            in (expressionSetReg register expr varTable, (varTable, num))
+            return (expressionSetReg register expr varTable)
 
-        translate _ (PrintStmt withNL (Variabl name)) = state $ \(varTable@VariableTracker{table=vars, stringLabels=labels}, num) -> 
-            ((case getRegisterMaybe name varTable of
-                (Just register) -> asmPrintReg register
-                Nothing -> 
-                    if name `elem` labels then asmPrintConstStr name 
-                    else error $ "Cannot find variable: " ++ name
+        translate _ (PrintStmt withNL (Variabl name)) = do
+            (varTable, num) <- get
+            return $ (case getRegisterMaybe name varTable of
+                    (Just register) -> asmPrintReg register
+                    Nothing ->
+                        if name `elem` stringLabels varTable then asmPrintConstStr name 
+                        else error $ "Cannot find variable: " ++ name
 
-            ) ++ if withNL then printNewLineCall else [], (varTable, num))
+                ) ++ if withNL then printNewLineCall else []
 
 
-        translate _ (PrintStmt withNL (Immediate n)) = state $ \(varTable, num) -> (asmPrintInt n ++ if withNL then printNewLineCall else [], (varTable, num))
+        translate _ (PrintStmt withNL (Immediate n)) = return $ asmPrintInt n ++ if withNL then printNewLineCall else []
 
-        translate _ (PrintStmt withNL expr) = state $ \(varTable, num) -> 
-            (let (code, reg) = expressionEval expr varTable
-            in code ++ asmPrintReg reg ++ if withNL then printNewLineCall else [], (varTable, num))
+        translate _ (PrintStmt withNL expr) = do
+            (varTable, _) <- get
+            let (code, reg) = expressionEval expr varTable
+            return $ code ++ asmPrintReg reg ++ if withNL then printNewLineCall else []
 
-        translate prefix (IfStmt expr block elseBlock) = state $ \(varTable@VariableTracker{table=vars, stringLabels=labels}, num) -> 
+        translate prefix (IfStmt expr block elseBlock) = state $ \(varTable, num) -> 
             let ifLabel = "if_end_" ++ prefix ++ '_':show num -- jump after if block
                 elseLabel = "else_end_" ++ prefix ++ '_':show num -- jump after else block
 
@@ -130,7 +133,7 @@ translator pref stmts = --pref statements =
 
         translate _ (PrintLiteralStmt _ _) = error "Failed: PrintLiteralStmt should not appear in translate"
 
-        translate prefix (WhileStmt expr block) = state $ \(varTable@VariableTracker{table=vars, stringLabels=labels}, num) ->
+        translate prefix (WhileStmt expr block) = state $ \(varTable, num) ->
             let loopLabel = "while_loop_" ++ prefix ++ '_':show num
                 endLabel = "while_end_" ++ prefix ++ '_':show num
 
@@ -158,19 +161,14 @@ translator pref stmts = --pref statements =
 
         translatorHelper :: LabelPrefix -> [Stmt] -> State (VariableTracker, Int) [Line]
         translatorHelper prefix [] = state $ \(varTable, num) -> ([], (varTable, num))
-        translatorHelper prefix (st:ls) = do --state $ \(varTable, num) -> 
+        translatorHelper prefix (st:ls) = do
             code <- translate prefix st
             codeLater <- translatorHelper prefix ls
             return (code ++ codeLater)
     
-    -- state $ \(varTable, num) -> 
-    in do
-        varTable <- get
-
-        let (lines, (varTable2, num)) = runState (translatorHelper pref stmts) (varTable, 0)
-        put varTable2
-        return lines --removeLastOf3Tup `dddot` translatorHelper 0 --pref statements
-        
+    in get >>= (\varTable ->
+        let (lines, state2) = runState (translatorHelper pref stmts) (varTable, 0)
+        in putAndReturn (fst state2) lines) --removeLastOf3Tup `dddot` translatorHelper 0 --pref statements
 
 
 --translate (ConstStmt name value) varTable = undefined 
@@ -235,11 +233,11 @@ printLiteralHelper (PrintLiteralStmt nl s) = state (\consts ->
             let label = "str_" ++ show (findFreeLabel consts)
             in  (PrintStmt nl (Variabl label), CStmtStr label s:consts))
 
-printLiteralHelper ls = state (\st -> (ls, st))
+printLiteralHelper ls = return ls
 
 
 printLiteralProcessor :: [Stmt] -> State [ConstStmt] [Stmt]
-printLiteralProcessor [] = state (\st -> ([], st))
+printLiteralProcessor [] = return []
 printLiteralProcessor (st:stmts) = do
     stNew <- printLiteralHelper st
     stmtsFinal <- printLiteralProcessor stmts
