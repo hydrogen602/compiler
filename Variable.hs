@@ -1,5 +1,6 @@
 module Variable where
 
+import Control.Monad.State  
 import Debug.Trace
 import Util
 
@@ -19,13 +20,13 @@ data RegisterAssignment =
 newVarTracker :: [String] -> VariableTracker
 newVarTracker dataLabels = VariableTracker { table=map Unassigned allSRegisters, stringLabels=dataLabels }
 
-addStringLabel :: VariableTracker -> String -> VariableTracker
-addStringLabel varTrack name =
-    VariableTracker{table=table varTrack, stringLabels=name:stringLabels varTrack}
+-- addStringLabel :: VariableTracker -> String -> VariableTracker
+-- addStringLabel varTrack name =
+--     VariableTracker{table=table varTrack, stringLabels=name:stringLabels varTrack}
 
-setStringLabels :: VariableTracker -> [String] -> VariableTracker
-setStringLabels varTrack labels =
-    VariableTracker{table=table varTrack, stringLabels=labels}
+-- setStringLabels :: VariableTracker -> [String] -> VariableTracker
+-- setStringLabels varTrack labels =
+--     VariableTracker{table=table varTrack, stringLabels=labels}
 
 assignNewVar :: VariableTracker -> String -> VariableTracker
 assignNewVar varTrack name = 
@@ -52,3 +53,16 @@ getRegister name varTable =
     case getRegisterMaybe name varTable of
         (Just s) -> s
         Nothing -> error $ "Cannot find variable: " ++ name
+
+
+assignNewVar2 :: String -> State (VariableTracker, a) ()
+assignNewVar2 name = do 
+    (varTrack, n) <- get
+    let findFreeAndAssign :: [RegisterAssignment] -> [RegisterAssignment]
+        findFreeAndAssign [] = error "Ran out of registers to assign"
+        findFreeAndAssign (e@(Assigned _ _):ls) = e:findFreeAndAssign ls
+        findFreeAndAssign (Unassigned reg:ls) = Assigned reg name:ls
+
+        newAssigns = findFreeAndAssign $ table varTrack
+    
+    put (VariableTracker{table=newAssigns, stringLabels=stringLabels varTrack}, n)

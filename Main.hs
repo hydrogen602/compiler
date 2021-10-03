@@ -72,42 +72,44 @@ expressionSetReg s (Immediate n) varTable = asmSetToImmediate s n
 expressionSetReg s expr varTable = fst $ expressionEvalHelper (s:allTRegisters) expr varTable
 
 
-translator :: LabelPrefix -> [Stmt] -> VariableTracker -> ([Line], VariableTracker)
-translator = --pref statements =
-    let translate :: LabelPrefix -> Int -> Stmt -> VariableTracker -> ([Line], VariableTracker, Int)
-        translate _ num (LetStmt name expr) varTable = trace ("let stmt! name = " ++ name) $
-            let varTableNew = assignNewVar varTable name
-                register = getRegister name varTableNew
-            in (expressionSetReg register expr varTableNew, varTableNew, num)
+translator :: LabelPrefix -> [Stmt] -> State VariableTracker [Line]
+translator pref stmts = --pref statements =
+    let translate :: LabelPrefix -> Stmt -> State (VariableTracker, Int) [Line]
+        translate _ (LetStmt name expr) = do
+            assignNewVar2 name
+            (varTableNew, n) <- get
+            let register = getRegister name varTableNew
 
-        translate _ num (AssignStmt name expr) varTable = 
+            return (expressionSetReg register expr varTableNew)
+
+        translate _ (AssignStmt name expr) = state $ \(varTable, num) -> 
             let register = getRegister name varTable
-            in (expressionSetReg register expr varTable, varTable, num)
+            in (expressionSetReg register expr varTable, (varTable, num))
 
-        translate _ num (PrintStmt withNL (Variabl name)) varTable@VariableTracker{table=vars, stringLabels=labels} = 
+        translate _ (PrintStmt withNL (Variabl name)) = state $ \(varTable@VariableTracker{table=vars, stringLabels=labels}, num) -> 
             ((case getRegisterMaybe name varTable of
                 (Just register) -> asmPrintReg register
                 Nothing -> 
                     if name `elem` labels then asmPrintConstStr name 
                     else error $ "Cannot find variable: " ++ name
 
-            ) ++ if withNL then printNewLineCall else [], varTable, num)
+            ) ++ if withNL then printNewLineCall else [], (varTable, num))
 
 
-        translate _ num (PrintStmt withNL (Immediate n)) varTable = (asmPrintInt n ++ if withNL then printNewLineCall else [], varTable, num)
+        translate _ (PrintStmt withNL (Immediate n)) = state $ \(varTable, num) -> (asmPrintInt n ++ if withNL then printNewLineCall else [], (varTable, num))
 
-        translate _ num (PrintStmt withNL expr) varTable = 
+        translate _ (PrintStmt withNL expr) = state $ \(varTable, num) -> 
             (let (code, reg) = expressionEval expr varTable
-            in code ++ asmPrintReg reg ++ if withNL then printNewLineCall else [], varTable, num)
+            in code ++ asmPrintReg reg ++ if withNL then printNewLineCall else [], (varTable, num))
 
-        translate prefix num (IfStmt expr block elseBlock) varTable@VariableTracker{table=vars, stringLabels=labels} = 
+        translate prefix (IfStmt expr block elseBlock) = state $ \(varTable@VariableTracker{table=vars, stringLabels=labels}, num) -> 
             let ifLabel = "if_end_" ++ prefix ++ '_':show num -- jump after if block
                 elseLabel = "else_end_" ++ prefix ++ '_':show num -- jump after else block
 
                 innerPrefix = (prefix ++ "_" ++ show num)
 
                 (conditionCode, conditionReg) = expressionEval expr varTable
-                (innerBlock, _) = translator innerPrefix block varTable
+                (innerBlock, _) = runState (translator innerPrefix block) varTable
 
                 ifCondition = EmptyLine:conditionCode ++ [Instruction "beq" [conditionReg, "$0", ifLabel]]
                 afterIfBlock = [
@@ -118,49 +120,57 @@ translator = --pref statements =
                 code = case elseBlock of
                     [] -> ifCondition ++ innerBlock ++ afterIfBlock
                     block -> 
-                        let (innerElseBlock, _) = translator innerPrefix elseBlock varTable
+                        let (innerElseBlock, _) = runState (translator innerPrefix elseBlock) varTable
                             afterElseBlock = [EmptyLine, Label elseLabel]
                         in (ifCondition ++ innerBlock ++ [Instruction "j" [elseLabel]] ++ afterIfBlock ++ innerElseBlock ++ afterElseBlock)
 
 
-            in (code, varTable, num+1) -- not passing varTableNew because scope
+            in (code, (varTable, num+1)) -- not passing varTableNew because scope
             -- increment num cause we just made some labels with that num
 
-        translate _ _ (PrintLiteralStmt _ _) _ = error "Failed: PrintLiteralStmt should not appear in translate"
+        translate _ (PrintLiteralStmt _ _) = error "Failed: PrintLiteralStmt should not appear in translate"
 
-        translate prefix num (WhileStmt expr block) varTable@VariableTracker{table=vars, stringLabels=labels} =
+        translate prefix (WhileStmt expr block) = state $ \(varTable@VariableTracker{table=vars, stringLabels=labels}, num) ->
             let loopLabel = "while_loop_" ++ prefix ++ '_':show num
                 endLabel = "while_end_" ++ prefix ++ '_':show num
 
                 innerPrefix = (prefix ++ "_" ++ show num)
 
                 (conditionCode, conditionReg) = expressionEval expr varTable
-                (innerBlock, _) = translator innerPrefix block varTable
+                (innerBlock, _) = runState (translator innerPrefix block) varTable
 
                 ifCondition = EmptyLine:Label loopLabel:conditionCode ++ [Instruction "beq" [conditionReg, "$0", endLabel]]
 
-            in (ifCondition ++ innerBlock ++ [Instruction "j" [loopLabel], EmptyLine, Label endLabel], varTable, num+1)-- increment num cause we just made some labels with that num
+            in (ifCondition ++ innerBlock ++ [Instruction "j" [loopLabel], EmptyLine, Label endLabel], (varTable, num+1))-- increment num cause we just made some labels with that num
 
-        translate prefix num (FuncCall name givenArgs) varTable =
+        translate prefix (FuncCall name givenArgs) = state $ \(varTable, num) -> 
             let codeRegPairs = concat $ zipWith (\argExpr argReg -> expressionSetReg argReg argExpr varTable) givenArgs allARegisters 
                 --varMoves = concat $ zipWith (\arg aReg -> asmSetToRegister aReg (getRegister arg varTable)) givenArgs allARegisters
 
-            in (codeRegPairs ++ [Instruction "jal" [name]], varTable, num)
+            in (codeRegPairs ++ [Instruction "jal" [name]], (varTable, num))
         
-        translate prefix num (ReturnStmt var) varTable =
+        translate prefix (ReturnStmt var) = state $ \(varTable, num) -> 
             let m = asmSetToRegister "$v0" (getRegister var varTable)
-            in (m, varTable, num)
+            in (m, (varTable, num))
 
         -- translate _ _ stmt _ = error $ "Failed on the statement: " ++ show stmt
 
 
-        translatorHelper :: Int -> LabelPrefix -> [Stmt] -> VariableTracker -> ([Line], VariableTracker, Int)
-        translatorHelper num prefix [] varTable = ([], varTable, num)
-        translatorHelper num prefix (st:ls) varTable = --traceShow st $
-            let (code, varTableNew, numNew) = translate prefix num st varTable
-                (codeLater, varTableLater, numLast) = translatorHelper numNew prefix ls varTableNew
-            in (code ++ codeLater, varTableLater, numLast)
-    in removeLastOf3Tup `dddot` translatorHelper 0 --pref statements
+        translatorHelper :: LabelPrefix -> [Stmt] -> State (VariableTracker, Int) [Line]
+        translatorHelper prefix [] = state $ \(varTable, num) -> ([], (varTable, num))
+        translatorHelper prefix (st:ls) = do --state $ \(varTable, num) -> 
+            code <- translate prefix st
+            codeLater <- translatorHelper prefix ls
+            return (code ++ codeLater)
+    
+    -- state $ \(varTable, num) -> 
+    in do
+        varTable <- get
+
+        let (lines, (varTable2, num)) = runState (translatorHelper pref stmts) (varTable, 0)
+        put varTable2
+        return lines --removeLastOf3Tup `dddot` translatorHelper 0 --pref statements
+        
 
 
 --translate (ConstStmt name value) varTable = undefined 
@@ -190,7 +200,7 @@ translateFunc prefix (CFunc name block args:ls) varTable
     | otherwise = --(AsmString name value:aData, name:labels)
         let varTabWithArgs = foldr (flip assignNewVar) (newVarTracker labelsNew) args
             varMoves = concat $ zipWith (\arg aReg -> asmSetToRegister (getRegister arg varTabWithArgs) aReg) args allARegisters
-            (code, VariableTracker{stringLabels=labelsFinal}) = translator name block varTabWithArgs
+            (code, VariableTracker{stringLabels=labelsFinal}) = runState (translator name block) varTabWithArgs
         in  (AsmFunc name (varMoves ++ code):aData, name:labelsFinal)
     where (aData, labelsNew) = translateFunc prefix ls varTable
 
@@ -284,7 +294,7 @@ main = do
     print varTable
     putStrLn "==================================="
     --let registerTable = registerAssign ast dataLabels
-    let (asm, table) = translator "" ast varTable
+    let (asm, table) = runState (translator "" ast) varTable
 
     print asmData
     
