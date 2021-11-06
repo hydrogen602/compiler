@@ -1,6 +1,5 @@
 module AST where
 
-import Data.Foldable (Foldable)
 data Stmt = 
         LetStmt String Expr
       | AssignStmt String Expr
@@ -12,9 +11,14 @@ data Stmt =
       | ReturnStmt String
       deriving Show
 
-applyStmts :: [Stmt] -> (Stmt -> a -> a) -> a -> a
-applyStmts ls f input = foldr f input ls
+-- applyStmts :: [Stmt] -> (Stmt -> a -> a) -> a -> a
 -- applyStmts [] f input = input
+-- applyStmts ((IfStmt _ stmts1, stmts2):ls) f input =
+--     let a1 = applyStmts f stmts1
+--         a2 = applyStmts f stmts2
+
+
+--     in 
 -- applyStmts (stmt:ls) f input = f stmt (applyStmts ls f input)
 
 data ConstStmt =

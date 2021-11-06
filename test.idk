@@ -16,6 +16,6 @@ println c
 println hi
 
 let x = 42
-c = f()
+c = f(x)
 
 println c
