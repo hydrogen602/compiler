@@ -10,165 +10,7 @@ import Util
 import Data
 import Variable
 import Debug.Trace
-
-type LabelPrefix = String
-
-
-asmDoStuffToRegisters :: Char -> (String -> String -> String -> [Line])
-asmDoStuffToRegisters '+' = asmAddRegisters
-asmDoStuffToRegisters '<' = asmLessThanRegisters
-asmDoStuffToRegisters char = error $ "Unknown operator (registers): " ++ [char]
-
-asmDoStuffImmediate :: Char -> (String -> String -> Int -> [Line])
-asmDoStuffImmediate '+' = asmAddImmediate
-asmDoStuffImmediate '<' = asmLessThanImmediate
-asmDoStuffImmediate char = error $ "Unknown operator (immediate): " ++ [char]
-
-
--- no branches in expressions!!
-expressionEvalHelper :: [TReg] -> Expr -> VariableTracker -> ([Line], String) -- returns lines and register where result is
-expressionEvalHelper _ (Variabl s) varTable = 
-    ([], getRegister s varTable)
-
-expressionEvalHelper (register:_) (Immediate v) _ = 
-    let code = asmSetToImmediate register v
-    in (code, register)
-
-expressionEvalHelper (tmp:_) (Expr sym (Variabl s) (Immediate n)) varTable = --trace ("bbbbb: " ++ s) $
-    let reg = getRegister s varTable
-    in  (asmDoStuffImmediate sym tmp reg n, tmp)
-
-expressionEvalHelper (tmp:tmpRegLs) (Expr sym (Variabl s) e) varTable = trace ("aaaaa: " ++ s) $
-    let register = getRegister s varTable
-        (code, reg) = expressionEvalHelper tmpRegLs e varTable
-        codeAdd = asmDoStuffToRegisters sym tmp register reg
-    in (code ++ codeAdd, tmp)
-
--- expressionEvalHelper tmpRegLs@(tmp:_) (Expr sym (Immediate v) e) varTable = --trace ("immediate = " ++ show v) $
---     let (code, reg) = expressionEvalHelper tmpRegLs e varTable
---         (codeAdd, regOut) = (asmDoStuffImmediate sym tmp reg v, tmp)
---     in  (code ++ codeAdd, regOut)
-
-expressionEvalHelper (tmp:tmpRegLs) (Expr sym e1 e2) varTable = --trace "general expr eval helper" $
-    let (code1, reg1) = expressionEvalHelper (tmp:tmpRegLs) e1 varTable
-        (code2, reg2) = expressionEvalHelper tmpRegLs e2 varTable
-        set2 = asmDoStuffToRegisters sym tmp reg1 reg2 -- bug probably?
-    in (concat [code1, code2, set2], tmp)
-
-expressionEvalHelper (tmp:tmpRegLs) (FuncExpr fName givenArgs) varTable =
-    let codeRegPairs = concat $ zipWith (\argExpr argReg -> expressionSetReg argReg argExpr varTable) givenArgs allARegisters 
-        
-        fetch = asmSetToRegister tmp "$v0"
-    in (codeRegPairs ++ (Instruction "jal" [fName]:fetch), tmp)
-
-expressionEvalHelper regs expr varTable = error $ "Expression not dealt with: expr = " ++ show expr
-
-expressionEval :: Expr -> VariableTracker -> ([Line], String)
-expressionEval = expressionEvalHelper allTRegisters
-
-expressionSetReg :: String -> Expr -> VariableTracker -> [Line]
-expressionSetReg s (Variabl v) varTable = asmSetToRegister s (getRegister v varTable)
-expressionSetReg s (Immediate n) varTable = asmSetToImmediate s n
-expressionSetReg s expr varTable = fst $ expressionEvalHelper (s:allTRegisters) expr varTable
-
-
-translator :: LabelPrefix -> [Stmt] -> State VariableTracker [Line]
-translator pref stmts = --pref statements =
-    let translate :: LabelPrefix -> Stmt -> State (VariableTracker, Int) [Line]
-        translate _ (LetStmt name expr) = do
-            assignNewVar2 name
-            (varTableNew, _) <- get
-            let register = getRegister name varTableNew
-
-            return (expressionSetReg register expr varTableNew)
-
-        translate _ (AssignStmt name expr) = do
-            (varTable, _) <- get
-            let register = getRegister name varTable
-            return (expressionSetReg register expr varTable)
-
-        translate _ (PrintStmt withNL (Variabl name)) = do
-            (varTable, num) <- get
-            return $ (case getRegisterMaybe name varTable of
-                    (Just register) -> asmPrintReg register
-                    Nothing ->
-                        if name `elem` stringLabels varTable then asmPrintConstStr name 
-                        else error $ "Cannot find variable: " ++ name
-
-                ) ++ if withNL then printNewLineCall else []
-
-
-        translate _ (PrintStmt withNL (Immediate n)) = return $ asmPrintInt n ++ if withNL then printNewLineCall else []
-
-        translate _ (PrintStmt withNL expr) = do
-            (varTable, _) <- get
-            let (code, reg) = expressionEval expr varTable
-            return $ code ++ asmPrintReg reg ++ if withNL then printNewLineCall else []
-
-        translate prefix (IfStmt expr block elseBlock) = state $ \(varTable, num) -> 
-            let ifLabel = "if_end_" ++ prefix ++ '_':show num -- jump after if block
-                elseLabel = "else_end_" ++ prefix ++ '_':show num -- jump after else block
-
-                innerPrefix = (prefix ++ "_" ++ show num)
-
-                (conditionCode, conditionReg) = expressionEval expr varTable
-                (innerBlock, _) = runState (translator innerPrefix block) varTable
-
-                ifCondition = EmptyLine:conditionCode ++ [Instruction "beq" [conditionReg, "$0", ifLabel]]
-                afterIfBlock = [
-                    EmptyLine,
-                    Label ifLabel
-                    ]
-
-                code = case elseBlock of
-                    [] -> ifCondition ++ innerBlock ++ afterIfBlock
-                    block -> 
-                        let (innerElseBlock, _) = runState (translator innerPrefix elseBlock) varTable
-                            afterElseBlock = [EmptyLine, Label elseLabel]
-                        in (ifCondition ++ innerBlock ++ [Instruction "j" [elseLabel]] ++ afterIfBlock ++ innerElseBlock ++ afterElseBlock)
-
-
-            in (code, (varTable, num+1)) -- not passing varTableNew because scope
-            -- increment num cause we just made some labels with that num
-
-        translate _ (PrintLiteralStmt _ _) = error "Failed: PrintLiteralStmt should not appear in translate"
-
-        translate prefix (WhileStmt expr block) = state $ \(varTable, num) ->
-            let loopLabel = "while_loop_" ++ prefix ++ '_':show num
-                endLabel = "while_end_" ++ prefix ++ '_':show num
-
-                innerPrefix = (prefix ++ "_" ++ show num)
-
-                (conditionCode, conditionReg) = expressionEval expr varTable
-                (innerBlock, _) = runState (translator innerPrefix block) varTable
-
-                ifCondition = EmptyLine:Label loopLabel:conditionCode ++ [Instruction "beq" [conditionReg, "$0", endLabel]]
-
-            in (ifCondition ++ innerBlock ++ [Instruction "j" [loopLabel], EmptyLine, Label endLabel], (varTable, num+1))-- increment num cause we just made some labels with that num
-
-        translate prefix (FuncCall name givenArgs) = state $ \(varTable, num) -> 
-            let codeRegPairs = concat $ zipWith (\argExpr argReg -> expressionSetReg argReg argExpr varTable) givenArgs allARegisters 
-                --varMoves = concat $ zipWith (\arg aReg -> asmSetToRegister aReg (getRegister arg varTable)) givenArgs allARegisters
-
-            in (codeRegPairs ++ [Instruction "jal" [name]], (varTable, num))
-        
-        translate prefix (ReturnStmt var) = state $ \(varTable, num) -> 
-            let m = asmSetToRegister "$v0" (getRegister var varTable)
-            in (m, (varTable, num))
-
-        -- translate _ _ stmt _ = error $ "Failed on the statement: " ++ show stmt
-
-
-        translatorHelper :: LabelPrefix -> [Stmt] -> State (VariableTracker, Int) [Line]
-        translatorHelper prefix [] = state $ \(varTable, num) -> ([], (varTable, num))
-        translatorHelper prefix (st:ls) = do
-            code <- translate prefix st
-            codeLater <- translatorHelper prefix ls
-            return (code ++ codeLater)
-    
-    in get >>= (\varTable ->
-        let (lines, state2) = runState (translatorHelper pref stmts) (varTable, 0)
-        in putAndReturn (fst state2) lines) --removeLastOf3Tup `dddot` translatorHelper 0 --pref statements
+import Translator
 
 
 --translate (ConstStmt name value) varTable = undefined 
@@ -248,11 +90,13 @@ main :: IO ()
 main = do
     args <- getArgs
 
+    -- read input
     s <- case argumentExtract "-i" args of
         (Just inFile) -> readFile inFile
         Nothing  -> getContents 
 
-    let outFileName = case argumentExtract "-o" args of
+    let -- config output
+        outFileName = case argumentExtract "-o" args of
             (Just outFile) -> outFile
             Nothing -> "out.s"
 
@@ -265,9 +109,12 @@ main = do
 
             in  (finalConsts, CFunc name finalStmts args:postFuncs) 
 
+        -- parse
         (preConsts, preFuncs, preAst) = parser (s ++ "\n")
+        -- process constants, literals
         (ast, pre1consts) = runState (printLiteralProcessor preAst) preConsts
             --printLiteralProcessor preConsts preAst
+        -- process constants, literals in functions
         (consts, funcs) = funcHelper pre1consts preFuncs
 
     putStr "consts = "
@@ -279,6 +126,7 @@ main = do
 
     --putStrLn (show state)
 
+    -- process consts
     let (preAsmData, preLabels) = translateData "" consts []
     putStr "preLabels = "
     print preLabels
@@ -291,7 +139,7 @@ main = do
     putStrLn "==================================="
     print varTable
     putStrLn "==================================="
-    --let registerTable = registerAssign ast dataLabels
+    -- translate ast into asm
     let (asm, table) = runState (translator "" ast) varTable
 
     print asmData

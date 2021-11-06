@@ -4,6 +4,9 @@ import Data
 import Control.Monad.State  
 import Data.List
 
+type LabelPrefix = String
+
+
 type SReg = String
 type TReg = String
 type AReg = String

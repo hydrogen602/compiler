@@ -117,3 +117,13 @@ asmLessThanRegisters result r1 r2 = [Instruction "slt" [result, r1, r2]]
 
 asmLessThanImmediate :: String -> String -> Int -> [Line]
 asmLessThanImmediate result r1 n = [Instruction "slti" [result, r1, show n]]
+
+asmDoStuffToRegisters :: Char -> (String -> String -> String -> [Line])
+asmDoStuffToRegisters '+' = asmAddRegisters
+asmDoStuffToRegisters '<' = asmLessThanRegisters
+asmDoStuffToRegisters char = error $ "Unknown operator (registers): " ++ [char]
+
+asmDoStuffImmediate :: Char -> (String -> String -> Int -> [Line])
+asmDoStuffImmediate '+' = asmAddImmediate
+asmDoStuffImmediate '<' = asmLessThanImmediate
+asmDoStuffImmediate char = error $ "Unknown operator (immediate): " ++ [char]

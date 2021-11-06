@@ -12,3 +12,6 @@ Print
 ```
 print x
 ```
+
+```
+x = if ... then ... else ... end
