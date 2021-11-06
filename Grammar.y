@@ -35,6 +35,7 @@ import Debug.Trace
       '{'             { LCurly }
       '}'             { RCurly }
       ','             { Comma }
+      ':'             { Colon }
       '-'             { Sym '-' }
       '+'             { Sym '+' }
       '<'             { Sym '<' }
@@ -56,13 +57,13 @@ CStmt   : const var '=' str                        { Left $ CStmtStr $2 $4 }
 Return  : return var '\n'                          { [ReturnStmt $2] }
         | {- Empty -}                              { [] }
 
-
-Params  : var Params2                                { ($1):($2) }
+Params  : var Params2                            { ($1):($2) }
         | {- Empty -}                              { [] }
 
-Params2 : ',' var Params2                            { ($2):($3) }
+Params2 : ',' var Params2                        { ($2):($3) }
         | {- Empty -}                              { [] }
 
+-- Typed   : var ':' var                              { TypedParam ($1) ($3) }
 
 Args    :: { [Expr] }
         : Expr Args2                               { ($1):($2) }

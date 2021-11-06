@@ -11,6 +11,7 @@ import Data
 import Variable
 import Debug.Trace
 import Translator
+import Validator
 
 
 --translate (ConstStmt name value) varTable = undefined 
@@ -43,7 +44,6 @@ translateFunc prefix (CFunc name block args:ls) varTable
             (code, VariableTracker{stringLabels=labelsFinal}) = runState (translator name block) varTabWithArgs
         in  (AsmFunc name (varMoves ++ code):aData, name:labelsFinal)
     where (aData, labelsNew) = translateFunc prefix ls varTable
-
 
 printLiteralHelper :: Stmt -> State [ConstStmt] Stmt
 printLiteralHelper (IfStmt expr ifBlock elseBlock) = do
@@ -110,7 +110,7 @@ main = do
             in  (finalConsts, CFunc name finalStmts args:postFuncs) 
 
         -- parse
-        (preConsts, preFuncs, preAst) = parser (s ++ "\n")
+        (preConsts, preFuncs, preAst) = (verify . parser) (s ++ "\n")
         -- process constants, literals
         (ast, pre1consts) = runState (printLiteralProcessor preAst) preConsts
             --printLiteralProcessor preConsts preAst

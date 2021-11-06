@@ -16,6 +16,7 @@ data Token =
     LSqB        |
     RSqB        |
     Comma       |
+    Colon       |
     Return      |
     Print Bool  |
     Const       |

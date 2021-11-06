@@ -107,3 +107,5 @@ translator pref stmts = --pref statements =
     in get >>= (\varTable ->
         let (lines, state2) = runState (translatorHelper pref stmts) (varTable, 0)
         in putAndReturn (fst state2) lines) --removeLastOf3Tup `dddot` translatorHelper 0 --pref statements
+
+

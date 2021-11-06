@@ -81,3 +81,9 @@ mapTup func (ls1, ls2) =
 
 stateHelper :: b -> (a -> (b, a))
 stateHelper b st = (b, st)
+
+find :: (a -> Bool) -> [a] -> Maybe a
+find f ls = case filter f ls of
+  [] -> Nothing 
+  a:_ -> Just a
+        
