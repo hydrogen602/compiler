@@ -40,16 +40,35 @@ findFunctionCallErrorExpr funcs _ = Nothing
 
 walkAST :: [Stmt] -> (Stmt -> Maybe Error) -> (Expr -> Maybe Error) -> Maybe Error
 walkAST [] fS fE = Nothing -- no error
-walkAST (st@(IfStmt exp stmts1 stmts2):stmts) fS fE = traceShow st $
-    case fS st of
-        Nothing -> walkAST stmts fS fE
+walkAST (st@(IfStmt exp stmts1 stmts2):stmts) fS fE = traceShow st $ case fE exp of
+    Just err -> Just err
+    Nothing -> case walkAST stmts1 fS fE of
         Just err -> Just err
-walkAST (st@(LetStmt _ expr):stmts) fS fE = traceShow st $ (case fE expr of
+        Nothing -> case walkAST stmts2 fS fE of
+            Just err -> Just err
+            Nothing -> case fS st of
+                Nothing -> walkAST stmts fS fE
+                Just err -> Just err
+
+walkAST (st@(WhileStmt exp stmts1):stmts) fS fE = traceShow st $ case fE exp of
+    Just err -> Just err
+    Nothing -> case walkAST stmts1 fS fE of
+        Just err -> Just err
+        Nothing -> case fS st of
+            Nothing -> walkAST stmts fS fE
+            Just err -> Just err
+walkAST (st@(LetStmt _ expr):stmts) fS fE = traceShow st (case fE expr of
    Nothing -> walkAST stmts fS fE
    Just s -> Just s)
-walkAST (st@(AssignStmt _ expr):stmts) fS fE = traceShow st $ (case fE expr of
+walkAST (st@(AssignStmt _ expr):stmts) fS fE = traceShow st (case fE expr of
    Nothing -> walkAST stmts fS fE
    Just s -> Just s)
+walkAST (st@(PrintStmt _ expr):stmts) fS fE = traceShow st (case fE expr of
+   Nothing -> walkAST stmts fS fE
+   Just s -> Just s)
+walkAST (st@(FuncCall _ exprs):stmts) fS fE = traceShow st $ foldl (\mError e -> case mError of
+        Nothing -> walkExpr e fE
+        Just err -> Just err) Nothing exprs
 walkAST (st:stmts) fS fE = traceShow st $
     case fS st of
         Nothing -> walkAST stmts fS fE
