@@ -6,7 +6,7 @@ import System.Environment ( getArgs )
 import Grammar
 import Asm
 import AST
-import Util
+import Util.Util
 import Data
 import Variable
 import Debug.Trace

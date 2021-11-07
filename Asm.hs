@@ -2,7 +2,13 @@ module Asm where
 
 import Data.List ( intercalate )
 import Data
-import Util
+import Util.Util
+    ( allSRegisters,
+      printNewLineCode,
+      printNewLineCall,
+      unpackLs1,
+      filterBoth,
+      mapTup )
 
 
 generateText :: ASM -> String

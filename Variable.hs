@@ -2,7 +2,7 @@ module Variable where
 
 import Control.Monad.State  
 import Debug.Trace
-import Util
+import Util.Util
 
 
 data VariableTracker = VariableTracker {

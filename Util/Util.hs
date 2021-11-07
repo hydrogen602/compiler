@@ -1,4 +1,4 @@
-module Util where
+module Util.Util where
 import Data
 
 import Control.Monad.State  

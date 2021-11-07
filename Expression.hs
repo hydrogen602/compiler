@@ -1,7 +1,7 @@
 module Expression where
 import AST
 import Variable
-import Util ( allTRegisters, allARegisters, TReg )
+import Util.Util ( allTRegisters, allARegisters, TReg )
 import Data
 import Asm
 import Debug.Trace

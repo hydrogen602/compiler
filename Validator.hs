@@ -1,7 +1,7 @@
 module Validator where
 
 import AST
-import Util
+import Util.Util
 import Debug.Trace
 import Control.Monad.Writer  
 
@@ -29,7 +29,7 @@ findFunctionCallErrorExpr funcs (FuncExpr name given_params) = trace "yeeted" $ 
         fM = find ((name ==) . getName) funcs
     in case fM of
             Nothing -> Just $ "No such function: " ++ name
-            Just (CFunc _ _ req_params) -> 
+            Just (CFunc _ _ req_params) ->
                 traceShow ("req_params: " ++ show req_params ++ ", given_params: " ++ show given_params) (
                 if length req_params == length given_params then
                     Nothing

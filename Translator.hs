@@ -1,10 +1,10 @@
 module Translator where
 -- turn the AST into ASM
 import Asm
-import Util
+import Util.Util
 import Data
 import AST
-import Control.Monad.State  
+import Control.Monad.State 
 import Variable
 import Debug.Trace
 import Expression
