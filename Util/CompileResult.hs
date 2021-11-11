@@ -20,6 +20,20 @@ instance Monad CompileResult where
 
     return = Success
 
+instance Semigroup m => Semigroup (CompileResult m) where
+    (Success a) <> (Success b) = Success (a <> b)
+    (Success _) <> err = err
+    (NameError e) <> _ = NameError e
+    (ArgumentError e) <> _ = ArgumentError e
+
+instance Monoid m => Monoid (CompileResult m) where
+    mempty = Success mempty
+    mappend = (<>)
+    -- mappend (Success a) (Success b) = Success $ mappend a b
+    -- mappend (Success _) err = err
+    -- mappend (NameError s) _ = NameError s
+    -- mappend (ArgumentError s) _ = ArgumentError s
+
 nameMaybeToCResult :: Maybe a -> String -> CompileResult a
 nameMaybeToCResult (Just a) = const (Success a)
 nameMaybeToCResult Nothing = NameError

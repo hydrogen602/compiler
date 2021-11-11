@@ -21,7 +21,7 @@ Grammar: Grammar.hs
 	ghc Grammar.hs
 
 clean:
-	rm -f *.o *.hi Main 
+	rm -f *.o *.hi Main Util/*.o Util/*.hi
 
 xclean: clean
 	rm -f ${GENERATED}
