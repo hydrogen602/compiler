@@ -3,6 +3,8 @@
         "concat",
         "eval",
         "foldr",
+        "mappend",
+        "mempty",
         "println",
         "syscall"
     ],

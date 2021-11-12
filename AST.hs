@@ -30,7 +30,7 @@ type FuncParam = String
 
 data Function = CFunc String [Stmt] [FuncParam] deriving Show -- name, code
 
-
+type SubAST = [Stmt]
 type AST = ([ConstStmt], [Function], [Stmt])
 
 data Expr = 
