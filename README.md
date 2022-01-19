@@ -4,6 +4,8 @@ This project attempts to create a custom language and a compiler for it that gen
 
 A few examples of the language can be found in `fib.idk`, `fibR.idk`, `test.idk`, and `test.old.idk`.
 
+Currently the language features functions, recursion, if, else, and while statements, and can print out string literals. The only type currently supported is integers.
+
 ## How to run
 
 Run `make` to compile the compiler
