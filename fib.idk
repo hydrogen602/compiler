@@ -1,3 +1,4 @@
+-- Print out the fibonacci numbers
 let a = 0
 let b = 1
 let n = 1000

@@ -15,11 +15,11 @@ expressionEvalHelper (register:_) (Immediate v) _ =
     let code = asmSetToImmediate register v
     in (code, register)
 
-expressionEvalHelper (tmp:_) (Expr sym (Variabl s) (Immediate n)) varTable = --trace ("bbbbb: " ++ s) $
+expressionEvalHelper (tmp:_) (Expr sym (Variabl s) (Immediate n)) varTable =
     let reg = getRegister s varTable
     in  (asmDoStuffImmediate sym tmp reg n, tmp)
 
-expressionEvalHelper (tmp:tmpRegLs) (Expr sym (Variabl s) e) varTable = trace ("aaaaa: " ++ s) $
+expressionEvalHelper (tmp:tmpRegLs) (Expr sym (Variabl s) e) varTable =
     let register = getRegister s varTable
         (code, reg) = expressionEvalHelper tmpRegLs e varTable
         codeAdd = asmDoStuffToRegisters sym tmp register reg
