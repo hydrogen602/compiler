@@ -4,8 +4,11 @@ module Grammar (parser, Stmt(..), Expr(..)) where
 import Data.Char
 import Lexer
 import Token
-import AST
 import Debug.Trace
+import Util.AST
+import Util.Types
+import Util.Literals
+import qualified Data.Map.Strict as Map
 }
 
 %name calc
@@ -49,18 +52,18 @@ import Debug.Trace
 %%
 
 Start   : CStmt '\n' Start                         { startHelper ($1) ($3) }
-        | Block                                    { ([], [], ($1)) }
+        | Block                                    { fromStmts ($1) }
 
-CStmt   : const var '=' str                        { Left $ CStmtStr $2 $4 }
-        | def var '(' Params ')' '{' Block Return '}'       { Right $ CFunc $2 (($7)++($8)) $4 }
+CStmt   : const var '=' str                            { Left (ConstName ($2), ConstValueStr ($4)) }
+        | def var '(' Params ')' '{' Block Return '}'  { Right (ASTFunction (FunctionName ($2)) ($4) (($7)++($8))) }
 
-Return  : return var '\n'                          { [ReturnStmt $2] }
+Return  : return Expr '\n'                          { [ReturnStmt ($2)] }
         | {- Empty -}                              { [] }
 
-Params  : var Params2                            { ($1):($2) }
+Params  : var Params2                              { (LocalVariable $1):($2) }
         | {- Empty -}                              { [] }
 
-Params2 : ',' var Params2                        { ($2):($3) }
+Params2 : ',' var Params2                          { (LocalVariable $2):($3) }
         | {- Empty -}                              { [] }
 
 -- Typed   : var ':' var                              { TypedParam ($1) ($3) }
@@ -77,15 +80,15 @@ Args2   :: { [Expr] }
 Block   : Stmt '\n' Block                          { ($1):($3) }
         | {- Empty -}                              { [] }
 
-Stmt    : let var '=' Expr                         { LetStmt $2 $4 }
-        | var '=' Expr                             { AssignStmt $1 $3 }
-        | println str                              { PrintLiteralStmt True $2 }
-        | print str                                { PrintLiteralStmt False $2 }
-        | println Expr                             { PrintStmt True $2 }
-        | print Expr                               { PrintStmt False $2 }
+Stmt    : let var '=' Expr                         { LetStmt (LocalVariable $2) $4 }
+        | var '=' Expr                             { AssignStmt (LocalVariable $1) $3 }
+        | println str                              { PrintLiteralStmt UseNewLine $2 }
+        | print str                                { PrintLiteralStmt NoUseNewLine $2 }
+        | println Expr                             { PrintStmt UseNewLine $2 }
+        | print Expr                               { PrintStmt NoUseNewLine $2 }
         | if Expr '{' Block '}' ElseP              { IfStmt $2 $4 $6 }
         | while Expr '{' Block '}'                 { WhileStmt $2 $4 }
-        | var '(' Args ')'                         { FuncCall $1 $3 }
+        | var '(' Args ')'                         { FuncCall (FunctionName $1) $3 }
 
 ElseP   : else '{' Block '}'                       { $3 }
         | {- Empty -}                              { [] }
@@ -93,9 +96,9 @@ ElseP   : else '{' Block '}'                       { $3 }
 Expr    : Expr '+' Expr                            { Expr '+' $1 $3 }
         | Expr '<' Expr                            { Expr '<' $1 $3 }
         | Value                                    { $1 }
-        | var '(' Args ')'                         { FuncExpr $1 $3 }
+        | var '(' Args ')'                         { FuncExpr (FunctionName $1) $3 }
 
-Value   : var                                      { Variabl $1 }
+Value   : var                                      { Variabl (LocalVariable $1) }
         | int                                      { Immediate $1 }
 
 {
@@ -103,9 +106,5 @@ parseError :: [Token] -> a
 parseError tok = error $ "Parse error " ++ show tok
 
 parser :: String -> AST
-parser s = let x = lexThis s in calc (trace (show x) x)
-
-startHelper :: Either ConstStmt Function -> AST -> AST
-startHelper (Left c) (consts, funcs, stmts) = (c:consts, funcs, stmts)
-startHelper (Right f) (consts, funcs, stmts) = (consts, f:funcs, stmts)
+parser = calc . lexThis
 }

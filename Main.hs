@@ -1,151 +1,160 @@
+-- import           AST
+import           Asm
+import           Control.Monad.State
+import           Data
+import           Data.Char
+import           Data.List           as List
+import qualified Data.Map.Strict     as Map
+import           Debug.Trace
+import           Numeric.Natural
+import           System.Environment  (getArgs)
 
-import Data.Char
-import Control.Monad.State  
-import Data.List
-import System.Environment ( getArgs )
-import Grammar
-import Asm
-import AST
-import Util.Util
-import Data
-import Variable
-import Debug.Trace
-import Translator
-import Validator
+import           Grammar
+import           Translator
+import           Util.AST            (astToProgram)
+import           Util.Flattened      (transformMany)
+import           Util.Literals       (ConstValue (ConstValueStr), Consts (..))
+import qualified Util.Types          as Types
+import           Util.Util
+import           Validator
+import           Variable
 
+--translate (ConstStmt name value) varTable = undefined
 
---translate (ConstStmt name value) varTable = undefined 
+-- translateData :: Map.Map String ConstValue -> Error [AsmData]
+-- translateData = traverse (uncurry checker) . Map.toList
 
-translateData :: LabelPrefix -> [ConstStmt] -> [String] -> ([AsmData], [String])
-translateData _ [] labels = ([], labels)
-translateData prefix ((CStmtStr name value):ls) varTable
-    | name == "main" = error "Cannot use label main"
-    | "if_end_" `isPrefixOf` name = error "Label cannot start with 'if_end_'"
-    | "else_end_" `isPrefixOf` name = error "Label cannot start with 'else_end_'"
-    | "while_" `isPrefixOf` name = error "Label cannot start with 'while_'"
---    | "str_" `isPrefixOf` name = error "Label cannot start with 'str_'"
-    | name `elem` labelsNew = error $ "Label already used: " ++ name
-    | otherwise = (AsmString name value:aData, name:labelsNew)
-    where (aData, labelsNew) = translateData prefix ls varTable
-
-translateFunc :: LabelPrefix -> [Function] -> [String] -> ([AsmData], [String])
-translateFunc _ [] labels = ([], labels)
-translateFunc prefix (CFunc name block args:ls) varTable
-    | name == "main" = error "Cannot use label main"
-    | "if_end_" `isPrefixOf` name = error "Label cannot start with 'if_end_'"
-    | "else_end_" `isPrefixOf` name = error "Label cannot start with 'else_end_'"
-    | "while_" `isPrefixOf` name = error "Label cannot start with 'while_'"
-    | "str_" `isPrefixOf` name = error "Label cannot start with 'str_'"
-    | name `elem` labelsNew = error $ "Label already used: " ++ name
-    | length args > 4 = error $ "Can only support a max of 4 arguments, got " ++ (show . length) args ++ " arguments"
-    | otherwise = --(AsmString name value:aData, name:labels)
-        let varTabWithArgs = foldr (flip assignNewVar) (newVarTracker labelsNew) args
-            varMoves = concat $ zipWith (\arg aReg -> asmSetToRegister (getRegister arg varTabWithArgs) aReg) args allARegisters
-            (code, VariableTracker{stringLabels=labelsFinal}) = runState (translator name block) varTabWithArgs
-        in  (AsmFunc name (varMoves ++ code):aData, name:labelsFinal)
-    where (aData, labelsNew) = translateFunc prefix ls varTable
-
-printLiteralHelper :: Stmt -> State [ConstStmt] Stmt
-printLiteralHelper (IfStmt expr ifBlock elseBlock) = do
-    ifAst <- printLiteralProcessor ifBlock
-    elseAst <- printLiteralProcessor elseBlock
-    return (IfStmt expr ifAst elseAst)
-
-printLiteralHelper (WhileStmt expr block) = do
-    whileAst <- printLiteralProcessor block
-    return (WhileStmt expr whileAst)
-
-printLiteralHelper (PrintLiteralStmt nl s) = state (\consts ->
-    let existsAlready :: [ConstStmt] -> Maybe String
-        existsAlready [] = Nothing  
-        existsAlready (CStmtStr labelName str:ls) =
-            if str == s then Just labelName
-            else existsAlready ls
-
-        findFreeLabel :: [ConstStmt] -> Int
-        findFreeLabel [] = 0
-        findFreeLabel (CStmtStr ('s':'t':'r':'_':num) _:ls) =
-            let n = 1 + read num :: Int
-            in max n (findFreeLabel ls)
-        findFreeLabel (_:ls) = findFreeLabel ls
-
-    in case existsAlready consts of 
-        (Just label) -> (PrintStmt nl (Variabl label), consts) 
-        Nothing -> 
-            let label = "str_" ++ show (findFreeLabel consts)
-            in  (PrintStmt nl (Variabl label), CStmtStr label s:consts))
-
-printLiteralHelper ls = return ls
+--   where
+--     checker :: String -> ConstValue -> Error AsmData
+--     checker name constValue
+--       | name == "main" = throwError "Cannot use label main"
+--       | "if_end_" `isPrefixOf` name = throwError "Label cannot start with 'if_end_'"
+--       | "else_end_" `isPrefixOf` name = throwError "Label cannot start with 'else_end_'"
+--       | "while_" `isPrefixOf` name = throwError "Label cannot start with 'while_'"
+--       | otherwise = case constValue of
+--           ConstValueStr value -> pure $ AsmString name value
+--           -- _                   -> throwError "Not supported"
 
 
-printLiteralProcessor :: [Stmt] -> State [ConstStmt] [Stmt]
-printLiteralProcessor [] = return []
-printLiteralProcessor (st:stmts) = do
-    stNew <- printLiteralHelper st
-    stmtsFinal <- printLiteralProcessor stmts
-    return (stNew:stmtsFinal)
+-- translateFunc :: LabelPrefix -> [Function] -> [String] -> ([AsmData], [String])
+-- translateFunc _ [] labels = ([], labels)
+-- translateFunc prefix (CFunc name block args : ls) varTable
+--   | name == "main" = error "Cannot use label main"
+--   | "if_end_" `isPrefixOf` name = error "Label cannot start with 'if_end_'"
+--   | "else_end_" `isPrefixOf` name = error "Label cannot start with 'else_end_'"
+--   | "while_" `isPrefixOf` name = error "Label cannot start with 'while_'"
+--   | "str_" `isPrefixOf` name = error "Label cannot start with 'str_'"
+--   | name `elem` labelsNew = error $ "Label already used: " ++ name
+--   | length args > 4 = error $ "Can only support a max of 4 arguments, got " ++ (show . length) args ++ " arguments"
+--   | otherwise =
+--     let varTabWithArgs = foldr (flip assignNewVar) (newVarTracker labelsNew) args
+--         varMoves = concat $ zipWith (\arg aReg -> asmSetToRegister (getRegister arg varTabWithArgs) aReg) args allARegisters
+--         (code, VariableTracker {stringLabels = labelsFinal}) = runState (translator name block) varTabWithArgs
+--      in (AsmFunc name (varMoves ++ code) : aData, name : labelsFinal)
+--   where
+--     (aData, labelsNew) = translateFunc prefix ls varTable
 
+-- printLiteralHelper :: Stmt -> State (Map.Map String ConstValue) Stmt
+-- printLiteralHelper (IfStmt expr ifBlock elseBlock) = do
+--   ifAst <- printLiteralProcessor ifBlock
+--   elseAst <- printLiteralProcessor elseBlock
+--   return (IfStmt expr ifAst elseAst)
+-- printLiteralHelper (WhileStmt expr block) = do
+--   whileAst <- printLiteralProcessor block
+--   return (WhileStmt expr whileAst)
+-- printLiteralHelper (PrintLiteralStmt nl s) =
+--   state
+--     ( \consts ->
+--         let existsAlready :: Map.Map String ConstValue -> Maybe String
+--             existsAlready mapping =
+--               case fmap snd $ List.find (\x -> s == fst x) $ Map.toList mapping of
+--                 Just (ConstValueStr label) -> Just label
+--                 _                          -> Nothing
+
+--             findFreeLabel :: Map.Map String ConstValue -> Int -> Int
+--             findFreeLabel mapping n =
+--               if already then
+--                 findFreeLabel mapping (n+1)
+--               else
+--                 n
+--               where
+--                 already = Map.member ('s' : 't' : 'r' : '_' : show n) mapping
+
+--          in case existsAlready consts of
+--               (Just label) -> (PrintStmt nl (Variabl label), consts)
+--               Nothing ->
+--                 let label = "str_" ++ show (findFreeLabel consts 0)
+--                  in (PrintStmt nl (Variabl label), Map.insert label (ConstValueStr s) consts)
+--     )
+-- printLiteralHelper ls = return ls
+
+-- printLiteralProcessor :: [Stmt] -> State (Map.Map String ConstValue) [Stmt]
+-- printLiteralProcessor [] = return []
+-- printLiteralProcessor (st : stmts) = do
+--   stNew <- printLiteralHelper st
+--   stmtsFinal <- printLiteralProcessor stmts
+--   return (stNew : stmtsFinal)
 
 main :: IO ()
 main = do
-    args <- getArgs
+  args <- getArgs
 
-    -- read input
-    s <- case argumentExtract "-i" args of
-        (Just inFile) -> readFile inFile
-        Nothing  -> getContents 
+  -- read input
+  s <- case argumentExtract "-i" args of
+    (Just inFile) -> readFile inFile
+    Nothing       -> getContents
 
-    let -- config output
-        outFileName = case argumentExtract "-o" args of
-            (Just outFile) -> outFile
-            Nothing -> "out.s"
+  let -- config output
+      outFileName = case argumentExtract "-o" args of
+        (Just outFile) -> outFile
+        Nothing        -> "out.s"
 
-        funcHelper :: [ConstStmt] -> [Function] -> ([ConstStmt], [Function])
-        funcHelper consts [] = (consts, [])
-        funcHelper consts ((CFunc name stmts args):funcs) = 
-            let (postConsts, postFuncs) = funcHelper consts funcs
-                (finalStmts, finalConsts) = runState (printLiteralProcessor stmts) postConsts
-                    --printLiteralProcessor postConsts stmts
+      -- funcHelper :: Map.Map String ConstValue -> [Function] -> (Map.Map String ConstValue, [Function])
+      -- funcHelper consts [] = (consts, [])
+      -- funcHelper consts ((CFunc name stmts args) : funcs) =
+      --   let (postConsts, postFuncs) = funcHelper consts funcs
+      --       (finalStmts, finalConsts) = runState (printLiteralProcessor stmts) postConsts
+      --    in --printLiteralProcessor postConsts stmts
 
-            in  (finalConsts, CFunc name finalStmts args:postFuncs) 
+      --       (finalConsts, CFunc name finalStmts args : postFuncs)
 
-        -- parse
-        (preConsts, preFuncs, preAst) = (verify . parser) (s ++ "\n")
-        -- process constants, literals
-        (ast, pre1consts) = runState (printLiteralProcessor preAst) preConsts
-            --printLiteralProcessor preConsts preAst
-        -- process constants, literals in functions
-        (consts, funcs) = funcHelper pre1consts preFuncs
+      -- parse
+      ast = parser (s ++ "\n") -- verify .
+      program = astToProgram ast
 
-    putStr "consts = "
-    print consts
-    putStr "ast = "
-    print ast
+  -- putStr "consts = "
+  -- print consts
+  -- putStr "ast = "
+  -- print ast
+  print ast
+  putStrLn ""
+  print program
 
-    --let state = evalAST ast (LocalSt [])
+  let s2 = evalState (transformMany $ Types.code program) (0::Natural)
 
-    --putStrLn (show state)
+  print s2
 
-    -- process consts
-    let (preAsmData, preLabels) = translateData "" consts []
-    putStr "preLabels = "
-    print preLabels
-    let (asmFuncs, labels) = translateFunc "" funcs preLabels 
+  --let state = evalAST ast (LocalSt [])
 
-        asmData = asmFuncs ++ preAsmData
+  --putStrLn (show state)
 
-        varTable = newVarTracker labels
+  -- process consts
+  -- let preAsmData = yeetError $ translateData consts
+  -- let (asmFuncs, labels) = translateFunc "" funcs []
 
-    putStrLn "==================================="
-    print varTable
-    putStrLn "==================================="
-    -- translate ast into asm
-    let (asm, table) = runState (translator "" ast) varTable
+  --     asmData = asmFuncs ++ preAsmData
 
-    print asmData
-    
-    let out = generateText (asm, asmData)
+  --     varTable = newVarTracker labels
 
-    --putStrLn out
-    writeFile outFileName out
+  -- putStrLn "==================================="
+  -- print varTable
+  -- putStrLn "==================================="
+  -- -- translate ast into asm
+  -- let (asm, table) = runState (translator "" ast) varTable
 
+  -- print asmData
+
+  -- let out = generateText (asm, asmData)
+
+  --putStrLn out
+  -- writeFile outFileName out

@@ -1,49 +1,31 @@
 module Util.CompileResult where
 
--- let a be the output
-data CompileResult a = Success a | NameError String | ArgumentError String deriving Show
 
-instance Functor CompileResult where
-    fmap f m = m >>= (return . f) 
+type CompileResult = Either ErrorType
 
-instance Applicative CompileResult where
-    pure = return
-    (<*>) (Success f) = (>>= (return . f))
-    (<*>) (NameError s)  = const (NameError s)
-    (<*>) (ArgumentError s) = const (ArgumentError s)
-    -- (<*>) (err) = const (err)
+data ErrorType = NameError String | ArgumentError String | UnexpectedError String deriving (Eq, Ord)
 
-instance Monad CompileResult where
-    Success a >>= f = f a
-    NameError s >>= f = NameError s
-    ArgumentError s >>= f = ArgumentError s
+instance Show ErrorType where
+    show (NameError e)       = "NameError: " ++ e
+    show (ArgumentError e)   = "ArgumentError: " ++ e
+    show (UnexpectedError e) = "UnexpectedError: " ++ e
 
-    return = Success
+throwError :: ErrorType -> CompileResult a
+throwError = Left
 
-instance Semigroup m => Semigroup (CompileResult m) where
-    (Success a) <> (Success b) = Success (a <> b)
-    (Success _) <> err = err
-    (NameError e) <> _ = NameError e
-    (ArgumentError e) <> _ = ArgumentError e
+throwNameError :: String -> CompileResult a
+throwNameError = Left . NameError
 
-instance Monoid m => Monoid (CompileResult m) where
-    mempty = Success mempty
-    mappend = (<>)
-    -- mappend (Success a) (Success b) = Success $ mappend a b
-    -- mappend (Success _) err = err
-    -- mappend (NameError s) _ = NameError s
-    -- mappend (ArgumentError s) _ = ArgumentError s
+throwArgumentError :: String -> CompileResult a
+throwArgumentError = Left . ArgumentError
 
-nameMaybeToCResult :: Maybe a -> String -> CompileResult a
-nameMaybeToCResult (Just a) = const (Success a)
-nameMaybeToCResult Nothing = NameError
+throwUnexpectedError :: String -> CompileResult a
+throwUnexpectedError = Left . UnexpectedError
 
-assertSuccess :: CompileResult a -> a
-assertSuccess (Success a) = a
-assertSuccess (NameError s) = error $ "NameError: " ++ s
-assertSuccess (ArgumentError s) = error $ "ArgumentError: " ++ s
+catchAndPrint :: CompileResult a -> IO (Maybe a)
+catchAndPrint (Right a) = pure $ pure a
+catchAndPrint (Left e)  = print e >> pure Nothing
 
-assertSuccessPassThrough :: CompileResult () -> b -> b
-assertSuccessPassThrough (Success _) b = b
-assertSuccessPassThrough (NameError s) _ = error $ "NameError: " ++ s
-assertSuccessPassThrough (ArgumentError s) _ = error $ "ArgumentError: " ++ s
+fromSuccess :: CompileResult a -> a
+fromSuccess (Right a) = a
+fromSuccess (Left e)  = error $ show e

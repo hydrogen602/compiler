@@ -1,15 +1,22 @@
-.PHONY: all clean
+.PHONY: all clean xclean run
 
-SRCS = $(wildcard *.hs)
+
+SRCS = $(wildcard *.hs) $(wildcard Util/*.hs)
 
 GENERATED = Lexer.hs Grammar.hs
+
+export PATH := /opt/homebrew/opt/llvm@11/bin:$(PATH)
+# export PATH="/opt/homebrew/opt/llvm@11/bin:$PATH"
 
 # all: Main
 # 	@echo "Running Main"
 # 	@./Main
 
+run: Main
+	./Main -i test.idk
+
 Main: ${SRCS} ${GENERATED}
-	ghc Main.hs
+	ghc Main.hs -hidir build -odir build
 
 Lexer.hs: Lexer.x
 	alex Lexer.x
@@ -21,7 +28,7 @@ Grammar: Grammar.hs
 	ghc Grammar.hs
 
 clean:
-	rm -f *.o *.hi Main Util/*.o Util/*.hi
+	rm -rf Main build/*
 
 xclean: clean
 	rm -f ${GENERATED}

@@ -1,8 +1,8 @@
 module Util.Util where
-import Data
+import           Data
 
-import Control.Monad.State  
-import Data.List
+import           Control.Monad.State
+import           Data.List
 
 type LabelPrefix = String
 
@@ -12,7 +12,7 @@ type TReg = String
 type AReg = String
 
 
-generateTmpReg :: Int -> TReg 
+generateTmpReg :: Int -> TReg
 generateTmpReg n = "$t" ++ if n >= 0 && n < 10 then show n else error "Ran out of temporary registers"
 
 allTRegisters :: [TReg]
@@ -34,7 +34,7 @@ printNewLineCode = [
     Instruction "li" ["$a0", "10"],
     Instruction "li" ["$v0", "11"],
     Instruction "syscall" [],
-    Instruction "jr" ["$ra"] 
+    Instruction "jr" ["$ra"]
     ]
 
 printNewLineCall :: [Line]
@@ -42,20 +42,20 @@ printNewLineCall = [Instruction "jal" [printLabel]]
 
 unpackLs1 :: [a] -> a
 unpackLs1 [x] = x
-unpackLs1 _ = error "Expected one element in list"
+unpackLs1 _   = error "Expected one element in list"
 
--- containsSubList :: (Eq a) => [a] -> [a] -> Bool 
+-- containsSubList :: (Eq a) => [a] -> [a] -> Bool
 -- containsSubList [] _ = True
--- containsSubList _ [] = False 
+-- containsSubList _ [] = False
 -- containsSubList pre ls
---     | pre `isPrefixOf` ls = True 
+--     | pre `isPrefixOf` ls = True
 --     | otherwise = containsSubList pre (tail ls)
 
 argumentExtract :: String -> [String] -> Maybe String
-argumentExtract _ [] = Nothing 
-argumentExtract _ [_] = Nothing 
+argumentExtract _ [] = Nothing
+argumentExtract _ [_] = Nothing
 argumentExtract name (e:arg:args)
-    | name == e = Just arg 
+    | name == e = Just arg
     | otherwise = argumentExtract name args
 
 
@@ -66,14 +66,14 @@ putAndReturn :: MonadState s m => s -> b -> m b
 putAndReturn st re = put st >> return re
 
 ddot :: (b -> c) -> (a1 -> a2 -> b) -> a1 -> a2 -> c
-ddot = (.) . (.)
+ddot = (.) (.) (.)
 
 dddot :: (b -> c) -> (a1 -> a2 -> a3 -> b) -> a1 -> a2 -> a3 -> c
 dddot = (.) . (.) . (.)
 
 filterBoth :: (a -> Bool) -> [a] -> ([a], [a])
 filterBoth func ls =
-    (filter func ls, filter (not . func) ls) 
+    (filter func ls, filter (not . func) ls)
 
 mapTup :: (a -> b) -> ([a], [a]) -> ([b], [b])
 mapTup func (ls1, ls2) =
@@ -84,6 +84,6 @@ stateHelper b st = (b, st)
 
 find :: (a -> Bool) -> [a] -> Maybe a
 find f ls = case filter f ls of
-  [] -> Nothing 
+  []  -> Nothing
   a:_ -> Just a
-        
+
