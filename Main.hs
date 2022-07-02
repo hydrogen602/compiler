@@ -1,5 +1,4 @@
 -- import           AST
-import           Asm
 import           Control.Monad.State
 import           Data
 import           Data.Char
@@ -12,12 +11,14 @@ import           System.Environment  (getArgs)
 import           Grammar
 import           Translator
 import           Util.AST            (astToProgram)
-import           Util.Flattened      (transformMany)
+import           Util.Flattened      (transformMany, transformProgram)
 import           Util.Literals       (ConstValue (ConstValueStr), Consts (..))
 import qualified Util.Types          as Types
 import           Util.Util
 import           Validator
 import           Variable
+
+import           ASM.Gen
 
 --translate (ConstStmt name value) varTable = undefined
 
@@ -130,7 +131,7 @@ main = do
   putStrLn ""
   print program
 
-  let s2 = evalState (transformMany $ Types.code program) (0::Natural)
+  let s2 = evalState (transformProgram program) (0::Natural)
 
   print s2
 

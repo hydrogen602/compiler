@@ -1,31 +1,36 @@
+{-# LANGUAGE TupleSections #-}
+
 module Util.CompileResult where
+import           Control.Monad.State (StateT (StateT))
+import           Util.Util           (ddot)
+
+type Result = Either (ErrorType, String)
+
+data ErrorType =
+    NameError
+  | ArgumentError
+  | UnexpectedError
+  | LabelConflictError
+  | InvalidVariableNameError
+  deriving (Show, Eq, Ord)
 
 
-type CompileResult = Either ErrorType
+throwError :: ErrorType -> String -> Result a
+throwError = Left `ddot` (,)
 
-data ErrorType = NameError String | ArgumentError String | UnexpectedError String deriving (Eq, Ord)
+throwNameError :: String -> Result a
+throwNameError = Left . (NameError,)
 
-instance Show ErrorType where
-    show (NameError e)       = "NameError: " ++ e
-    show (ArgumentError e)   = "ArgumentError: " ++ e
-    show (UnexpectedError e) = "UnexpectedError: " ++ e
+throwArgumentError :: String -> Result a
+throwArgumentError = Left . (ArgumentError,)
 
-throwError :: ErrorType -> CompileResult a
-throwError = Left
+throwUnexpectedError :: String -> Result a
+throwUnexpectedError = Left . (UnexpectedError,)
 
-throwNameError :: String -> CompileResult a
-throwNameError = Left . NameError
-
-throwArgumentError :: String -> CompileResult a
-throwArgumentError = Left . ArgumentError
-
-throwUnexpectedError :: String -> CompileResult a
-throwUnexpectedError = Left . UnexpectedError
-
-catchAndPrint :: CompileResult a -> IO (Maybe a)
+catchAndPrint :: Result a -> IO (Maybe a)
 catchAndPrint (Right a) = pure $ pure a
-catchAndPrint (Left e)  = print e >> pure Nothing
+catchAndPrint (Left (err_type, err))  = print (show err_type ++ ": " ++ err) >> pure Nothing
 
-fromSuccess :: CompileResult a -> a
-fromSuccess (Right a) = a
-fromSuccess (Left e)  = error $ show e
+fromSuccess :: Result a -> a
+fromSuccess (Right a)              = a
+fromSuccess (Left (err_type, err)) = error $ show (show err_type ++ ": " ++ err)

@@ -1,11 +1,14 @@
 {-# LANGUAGE FlexibleInstances #-}
+
 module Util.Flattened where
 
 import           Control.Monad.State (MonadState (..), State, gets)
 import           Data.Foldable       (Foldable (fold))
+import qualified Data.Map.Strict     as Map
 import           Numeric.Natural     (Natural)
 
-import           Util.Classes        (Nameable (name))
+import           Util.Classes        (Empty (empty), Nameable (name))
+import           Util.Literals       as Literals2
 import           Util.Types          (FunctionName, LocalVariable,
                                       UseNewLine (..))
 import qualified Util.Types          as Types
@@ -118,3 +121,34 @@ transform (Types.ReturnStmt expr) = do
 transformMany :: [Types.Stmt] -> State Natural [Stmt2]
 transformMany ls = fold <$> traverse transform ls
 
+
+data Function2 = Function2 {
+  functionName :: FunctionName,
+  params       :: [LocalVariable],
+  functionCode :: [Stmt2],
+  literals     :: Literals2
+} deriving (Show, Eq, Ord)
+
+
+transformFunction :: Types.Function -> State Natural Function2
+transformFunction (Types.Function func_name params function_code literals) = do
+  stmts <- transformMany function_code
+  pure $ Function2 func_name params stmts literals
+
+
+data Program2 = Program2 {
+  functions :: Map.Map FunctionName Function2,
+  constants :: Consts,
+  code      :: [Stmt2]
+} deriving (Show, Eq, Ord)
+
+newProgram :: Program2
+newProgram = Program2 mempty empty mempty
+
+
+transformProgram :: Types.Program -> State Natural Program2
+transformProgram (Types.Program funcs consts code) = do
+  funcs2 <- traverse transformFunction funcs
+  stmts <- transformMany code
+
+  pure $ Program2 funcs2 consts stmts
