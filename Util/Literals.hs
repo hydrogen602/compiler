@@ -1,4 +1,4 @@
-module Util.Literals (Literals2, ConstValue(..), Consts(..), ConstName(..), addLiteral2, singletonLiteral2) where
+module Util.Literals (Literals2(..), ConstValue(..), Consts(..), ConstName(..), addLiteral2, singletonLiteral2) where
 
 import qualified Data.Map        as Map
 import qualified Data.Set        as Set

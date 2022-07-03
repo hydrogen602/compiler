@@ -4,6 +4,7 @@ import qualified Data.Map        as Map
 import           Numeric.Natural (Natural)
 
 import qualified Util.Classes    as Classes
+import qualified Util.Literals   as Literals
 
 
 newtype Label = Label { getLabel :: String } deriving (Show, Eq, Ord)
@@ -32,25 +33,28 @@ data Instruction =
   | WhileStmt Label UnlimitedRegister [Instruction] Label
   | Jump Label
   | Syscall {
-    params      :: [UnlimitedRegister],
+    arguments   :: [UnlimitedRegister],
     syscallType ::  SyscallType,
-    result      :: Maybe UnlimitedRegister }
+    result      :: Maybe UnlimitedRegister
+    }
   deriving (Show, Eq, Ord)
 
 
 type ASMLine = Either Instruction Label
 
 
-newtype ASMData = ASMData {
-  getASMData :: Map.Map Label String
+data ASMData = ASMData {
+  getNamedData  :: Map.Map Literals.ConstName (Label, String),
+  getUnamedData :: Map.Map Literals.ConstValue (Label, String)
 } deriving (Show, Eq, Ord)
 
 data ASMFunc = ASMFunc {
   func_name :: Label,
-  code      :: [ASMLine]
+  code      :: [ASMLine],
+  params    :: [UnlimitedRegister]
 } deriving (Show, Eq, Ord)
 
 data ASMProgram = ASMProgram {
   data_section :: ASMData,
-  functions    :: Map.Map Label [()]
+  functions    :: Map.Map Label ASMFunc
 } deriving (Show, Eq, Ord)
