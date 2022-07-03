@@ -9,7 +9,7 @@ import           Numeric.Natural     (Natural)
 
 import           Util.Classes        (Empty (empty), Nameable (name))
 import           Util.Literals       as Literals2
-import           Util.Types          (FunctionName, LocalVariable,
+import           Util.Types          (FunctionName, LocalVariable, Op,
                                       UseNewLine (..))
 import qualified Util.Types          as Types
 
@@ -39,7 +39,7 @@ data Stmt2 =
     LetStmt LocalVariable
   | AssignLiteralStmt GeneralVariable Int
   | AssignStmt GeneralVariable GeneralVariable
-  | BinaryFunc Char GeneralVariable GeneralVariable
+  | BinaryFuncStmt Op GeneralVariable GeneralVariable GeneralVariable
   | PrintStmt UseNewLine GeneralVariable
   | PrintLiteralStmt UseNewLine String
   | FuncCall FunctionName [GeneralVariable] (Maybe GeneralVariable)
@@ -66,7 +66,7 @@ transformExpr (Types.Expr op left right) target = do
   var2 <- getNewGeneralVar
   stmts2 <- transformExpr right var2
 
-  pure $ stmts1 ++ stmts2 ++ [BinaryFunc op var1 var2]
+  pure $ stmts1 ++ stmts2 ++ [BinaryFuncStmt op target var1 var2]
 
 transformExpr (Types.FuncExpr func_name expr_ls) target = do
   let

@@ -85,6 +85,11 @@ newProgram = Program mempty empty mempty
 data Expr =
   Variabl LocalVariable |
   Immediate Int |
-  Expr Char Expr Expr |
+  Expr Op Expr Expr |
   FuncExpr FunctionName [Expr]
+  deriving (Show, Eq, Ord)
+
+data Op =
+    ADD
+  | LESS_THAN
   deriving (Show, Eq, Ord)

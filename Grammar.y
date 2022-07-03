@@ -93,8 +93,8 @@ Stmt    : let var '=' Expr                         { LetStmt (LocalVariable $2) 
 ElseP   : else '{' Block '}'                       { $3 }
         | {- Empty -}                              { [] }
 
-Expr    : Expr '+' Expr                            { Expr '+' $1 $3 }
-        | Expr '<' Expr                            { Expr '<' $1 $3 }
+Expr    : Expr '+' Expr                            { Expr ADD $1 $3 }
+        | Expr '<' Expr                            { Expr LESS_THAN $1 $3 }
         | Value                                    { $1 }
         | var '(' Args ')'                         { FuncExpr (FunctionName $1) $3 }
 

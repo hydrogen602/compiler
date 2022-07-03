@@ -12,20 +12,18 @@ module ASM.VarTracker (
   ) where
 
 import           Control.Arrow       ((&&&))
-import           Control.Monad.State (MonadTrans (lift), State, StateT (StateT),
-                                      evalStateT, get, gets, modify, put)
+import           Control.Monad.State (MonadTrans (lift), State, evalState, get,
+                                      gets, modify, put)
+import           Data.Bifunctor      (Bifunctor (bimap))
+import           Data.List           (isPrefixOf)
 import qualified Data.Map            as Map
 import qualified Data.Set            as Set
 import           Numeric.Natural     (Natural)
 
 import           ASM.Types
-import           Data.Bifunctor      (Bifunctor (bimap))
-import           Data.List           (isPrefixOf)
 import qualified Util.Classes        as Classes
 import qualified Util.Classes        as Nameable
-import           Util.CompileResult  (ErrorType (InvalidVariableNameError, LabelConflictError),
-                                      Result, throwError, throwNameError,
-                                      throwUnexpectedError)
+import           Util.CompileResult
 import qualified Util.Flattened      as Flattened
 import qualified Util.Types          as Types
 
@@ -66,14 +64,14 @@ instance Classes.Empty ASMLabelTracker where
 -- getWhileLabels' = undefined
 
 
-addLabel :: Label -> StateT ASMLabelTracker Result ()
+addLabel :: Label -> ResultT (State ASMLabelTracker) ()
 addLabel label
   | any (`isPrefixOf` Nameable.name label) specialPrefixes =
-    lift $ throwError InvalidVariableNameError $ Nameable.name label
+    throwError InvalidVariableNameError $ Nameable.name label
   | otherwise = do
     labels <- gets all_labels
     if label `elem` labels then
-      lift $ throwError LabelConflictError $ Nameable.name label
+      throwError LabelConflictError $ Nameable.name label
     else
       modify (\tracker@ASMLabelTrackerConstructor{all_labels=l} -> tracker{all_labels=Set.insert label l})
 
@@ -115,27 +113,34 @@ instance Classes.Empty ASMVariableTrackerUnlimited where
 newScope :: ASMVariableTrackerUnlimited -> ASMVariableTrackerUnlimited
 newScope varTracker = ASMVariableTrackerUnlimited (counter varTracker) mempty $ Just varTracker
 
-addVariable :: Flattened.GeneralVariable -> StateT ASMVariableTrackerUnlimited Result UnlimitedRegister
+addVariable :: Flattened.GeneralVariable -> ResultT (State ASMVariableTrackerUnlimited) UnlimitedRegister
 addVariable var = do
   (varTracker, counter_val) <- gets $ var_mapping &&& counter
   if Map.member var varTracker then
-    lift $ throwNameError $ Nameable.name var
+    throwNameError $ Nameable.name var
   else do
     modify $ \varTrack -> varTrack{counter=counter_val+1, var_mapping=Map.insert var counter_val varTracker}
 
     pure $ UnlimitedRegister counter_val
 
 -- this should not modify the state
-getVariable :: Flattened.GeneralVariable -> StateT ASMVariableTrackerUnlimited Result UnlimitedRegister
+getVariable :: Flattened.GeneralVariable -> ResultT (State ASMVariableTrackerUnlimited) UnlimitedRegister
 getVariable var = do
+  let throw = throwNameError $ Nameable.name var
+
   varTracker <- gets var_mapping
   case Map.lookup var varTracker of
     Just s  -> pure $ UnlimitedRegister s
-    Nothing -> gets parent_scope >>=
-      lift . maybe (throwNameError $ Nameable.name var) (evalStateT $ getVariable var)
+    Nothing -> do
+      parentScope <- fromMaybeResult throw $ gets parent_scope
+      let
+        eval = flip evalState parentScope
+      -- ToDo: replace with withState
+      toTransformer $ fromTransformer eval $ getVariable var
 
-getOrAddVariable :: Flattened.GeneralVariable -> StateT ASMVariableTrackerUnlimited Result UnlimitedRegister
+getOrAddVariable :: Flattened.GeneralVariable -> ResultT (State ASMVariableTrackerUnlimited) UnlimitedRegister
 getOrAddVariable var = do
-  getRegister <- catchToMaybe
-
-  throwUnexpectedError ""
+  maybeRegister <- catch NameError $ getVariable var
+  case maybeRegister of
+    Nothing -> addVariable var
+    Just ur -> pure ur

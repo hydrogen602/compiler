@@ -1,4 +1,6 @@
-module Util.Literals (Literals2(..), ConstValue(..), Consts(..), ConstName(..), addLiteral2, singletonLiteral2) where
+{-# LANGUAGE FlexibleInstances #-}
+
+module Util.Literals (ToLiteral(..), Literals2(..), ConstValue(..), Consts(..), ConstName(..), addLiteral2, singletonLiteral2) where
 
 import qualified Data.Map        as Map
 import qualified Data.Set        as Set
@@ -12,6 +14,12 @@ newtype ConstName = ConstName {getConstName :: String} deriving (Show, Eq, Ord)
 newtype ConstValue =
     ConstValueStr String -- string
     deriving (Show, Eq, Ord)
+
+class ToLiteral a where
+    toLiteral :: a -> ConstValue
+
+instance ToLiteral String where
+    toLiteral = ConstValueStr
 
 data Consts = Consts {
     getNamed    :: Map.Map ConstName ConstValue,
