@@ -42,7 +42,8 @@ instance Applicative m => Applicative (ResultT m) where
 
 instance Monad m => Monad (ResultT m) where
   (ResultTFailed errType errMsg) >>= _ = ResultTFailed errType errMsg
-  (ResultT mValue) >>= f               = ResultT undefined
+  (ResultT mValue) >>= f               = ResultT $
+    undefined
 
   return = pure
 
