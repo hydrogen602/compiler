@@ -13,39 +13,36 @@ import           Control.Monad.Trans       (MonadTrans (lift))
 import           Data.Bifunctor            (Bifunctor (first, second))
 import           Util.Util                 (ddot)
 
-data ResultT m a =
-  ResultTFailed {
+data ResultBox a =
+  ResultBoxFailed {
     errType :: ErrorType,
     errMsg  :: String
   }
-  | ResultT {
-    value :: m a
-  }
-  deriving (Eq, Ord)
+  | ResultBox {
+    value :: a
+  } deriving (Eq, Ord)
 
-instance Show (ResultT m a) where
-  show ResultTFailed{errType=errType, errMsg=errMsg} =
+instance Show (ResultBox a) where
+  show ResultBoxFailed{errType=errType, errMsg=errMsg} =
     show errType ++ ": " ++ errMsg
-  show ResultT{value=value} = "Success"
+  show ResultBox{value=value} = "Success"
 
 
-instance Functor m => Functor (ResultT m) where
-  fmap _ (ResultTFailed errType errMsg) = ResultTFailed errType errMsg
-  fmap f (ResultT value)                = ResultT $ fmap f value
+newtype ResultT m a = ResultT { runResultT :: m (ResultBox a) } --deriving (Eq, Ord, Show)
+
+instance Functor (ResultT m) where
+  fmap f result = ResultT (f <$> runResultT result)
 
 instance Applicative m => Applicative (ResultT m) where
-  (ResultT f) <*> (ResultT ma)         = ResultT (f <*> ma)
-  (ResultTFailed errType errMsg) <*> _ = ResultTFailed errType errMsg
-  _ <*> (ResultTFailed errType errMsg) = ResultTFailed errType errMsg
-
+  rmf <*> rma = ResultT $ runResultT rmf <*> runResultT rma
   pure = ResultT . pure
 
 instance Monad m => Monad (ResultT m) where
-  (ResultTFailed errType errMsg) >>= _ = ResultTFailed errType errMsg
-  (ResultT mValue) >>= f               = ResultT $
-    undefined
-
-  return = pure
+  rma >>= f = ResultT $ do
+    resultBox <- runResultT rma
+    case resultBox of
+      (ResultBox val) -> runResultT (f val)
+      r               -> r
 
 instance MonadTrans ResultT where
   lift = ResultT
@@ -76,14 +73,20 @@ throwUnexpectedError :: String -> ResultT m a
 throwUnexpectedError = ResultTFailed UnexpectedError
 
 catchAll :: Applicative m => ResultT m a -> ResultT m (Maybe a)
-catchAll (ResultT ma)        = ResultT (Just <$> ma)
-catchAll (ResultTFailed _ _) = pure Nothing
+catchAll re = ResultT $ do
+  box <- runResultT re
+  pure $ case box of
+    (ResultBox val)                  -> ResultBox $ Just val
+    (ResultBoxFailed errType errMsg) -> ResultBox Nothing
 
 catch :: Applicative m => ErrorType -> ResultT m a -> ResultT m (Maybe a)
-catch errType (ResultT ma) = ResultT (Just <$> ma)
-catch errType (ResultTFailed err msg)
-  | errType == err = pure Nothing
-  | otherwise = ResultTFailed err msg
+catch err re = ResultT $ do
+  box <- runResultT re
+  pure $ case box of
+    (ResultBox val)                  -> ResultBox $ Just val
+    (ResultBoxFailed errType errMsg) ->
+      if errType == err then ResultBox $ Nothing
+      else ResultBoxFailed errType errMsg
 
 -- ResultT manipulation helpers
 
@@ -93,13 +96,12 @@ fromTransformer runMonad = mapInnerMonad (Identity . runMonad)
 toTransformer :: Monad m => Result a -> ResultT m a
 toTransformer = mapInnerMonad (pure . runIdentity)
 
-runResultT :: ResultT m a -> m a
-runResultT (ResultT a)                  = a
-runResultT (ResultTFailed err_type err) = error $ show (show err_type ++ ": " ++ err)
-
-runResultTEither :: ResultT m a -> Either (ErrorType, String) (m a)
-runResultTEither (ResultT a)                  = Right a
-runResultTEither (ResultTFailed err_type err) = Left (err_type, err)
+runResultTEither :: ResultT m a -> m (Either (ErrorType, String) a)
+runResultTEither (ResultT ma)                  = do
+  box <- ma
+  pure $ case box of
+    (ResultBox a)                    -> Right a
+    (ResultBoxFailed errType errMsg) -> Left (errType, errMsg)
 
 fromMaybeResult :: Monad m => ResultT m a -> ResultT m (Maybe a) -> ResultT m a
 fromMaybeResult throwable = (>>= maybe throwable pure)
@@ -107,16 +109,18 @@ fromMaybeResult throwable = (>>= maybe throwable pure)
 fromMaybe :: Monad m => ResultT m a -> Maybe a -> ResultT m a
 fromMaybe throwable = maybe throwable pure
 
-mapInnerMonad :: (m1 a -> m2 b) -> ResultT m1 a -> ResultT m2 b
-mapInnerMonad mapFunc (ResultT st)      = ResultT $ mapFunc st
-mapInnerMonad _ (ResultTFailed err msg) = ResultTFailed err msg
+-- mapInnerMonad :: (m1 a -> m2 b) -> ResultT m1 a -> ResultT m2 b
+-- mapInnerMonad mapFunc result = ResultT $ mapFunc (runResultT result)
+--   where
+--     x = mapFunc
+--     func :: m1 (ResultBox a) -> m2 (ResultBox b)
+--     func
 
 
 -- Monad Specific
-
 instance MonadState s (ResultT (State s)) where
-  get = ResultT StateModule.get -- what is this magic?
-  put s = ResultT $ StateModule.put s
+  get = ResultT $ StateModule.gets ResultBox
+  put s = ResultT $ ResultBox <$> StateModule.put
 
 -- firstState :: ResultT (State a) c -> a -> ResultT (State (a, b)) c
 -- firstState input st = t
