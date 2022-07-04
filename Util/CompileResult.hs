@@ -87,12 +87,10 @@ catch errType (ResultTFailed err msg)
 -- ResultT manipulation helpers
 
 fromTransformer :: (m a -> b) -> ResultT m a -> Result b
-fromTransformer _ (ResultTFailed err_type err) = ResultTFailed err_type err
-fromTransformer withMonad (ResultT m)          = pure $ withMonad m
+fromTransformer runMonad = mapInnerMonad (Identity . runMonad)
 
 toTransformer :: Monad m => Result a -> ResultT m a
-toTransformer (ResultT a)                  = pure (runIdentity a)
-toTransformer (ResultTFailed err_type err) = ResultTFailed err_type err
+toTransformer = mapInnerMonad (pure . runIdentity)
 
 runResultT :: ResultT m a -> m a
 runResultT (ResultT a)                  = a
@@ -108,7 +106,7 @@ fromMaybeResult throwable = (>>= maybe throwable pure)
 fromMaybe :: Monad m => ResultT m a -> Maybe a -> ResultT m a
 fromMaybe throwable = maybe throwable pure
 
-mapInnerMonad :: (m a -> m b) -> ResultT m a -> ResultT m b
+mapInnerMonad :: (m1 a -> m2 b) -> ResultT m1 a -> ResultT m2 b
 mapInnerMonad mapFunc (ResultT st)      = ResultT $ mapFunc st
 mapInnerMonad _ (ResultTFailed err msg) = ResultTFailed err msg
 
@@ -132,18 +130,16 @@ putFirst :: a -> ResultT (State (a, b)) ()
 putFirst a = modify (\(_, b) -> (a, b))
 
 firstState :: ResultT (State a) c -> ResultT (State (a, b)) c
-firstState (ResultT st) = ResultT $ state $ uncurry $ flip withOther
+firstState = mapInnerMonad $ state . uncurry . flip . flip withOther
   where
-    stateModifer = runIdentity . runStateT st
-    withOther b = second (,b) . stateModifer
-firstState (ResultTFailed err msg) = ResultTFailed err msg
+    stateModifer = runIdentity `ddot` runStateT
+    withOther b = second (,b) `ddot` stateModifer
 
 secondState :: ResultT (State b) c -> ResultT (State (a, b)) c
-secondState (ResultT st) = ResultT $ state $ uncurry withOther
+secondState = mapInnerMonad $ state . uncurry . flip withOther
   where
-    stateModifer = runIdentity . runStateT st
-    withOther a = second (a,) . stateModifer
-secondState (ResultTFailed err msg) = ResultTFailed err msg
+    stateModifer = runIdentity `ddot` runStateT
+    withOther a = second (a,) `ddot` stateModifer
 
 withStateResultT :: (s -> s) -> ResultT (State s) a -> ResultT (State s) a
 withStateResultT = mapInnerMonad . withState

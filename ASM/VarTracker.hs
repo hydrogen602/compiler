@@ -5,6 +5,7 @@ module ASM.VarTracker (
   getIfLabels,
   getWhileLabels,
   newScope,
+  popScope,
   addVariable,
   getVariable,
   specialPrefixes,
@@ -75,6 +76,7 @@ addLabel label
     else
       modify (\tracker@ASMLabelTrackerConstructor{all_labels=l} -> tracker{all_labels=Set.insert label l})
 
+
 getIfLabels :: State ASMLabelTracker (Label, Label)
 getIfLabels = do
   if_num <- gets if_counter
@@ -107,11 +109,21 @@ data ASMVariableTrackerUnlimited = ASMVariableTrackerUnlimited {
   parent_scope :: Maybe ASMVariableTrackerUnlimited
 }
 
+
 instance Classes.Empty ASMVariableTrackerUnlimited where
   empty = ASMVariableTrackerUnlimited 0 mempty Nothing
 
+
 newScope :: ASMVariableTrackerUnlimited -> ASMVariableTrackerUnlimited
 newScope varTracker = ASMVariableTrackerUnlimited (counter varTracker) mempty $ Just varTracker
+
+
+popScope :: ASMVariableTrackerUnlimited -> ASMVariableTrackerUnlimited
+popScope varTracker = case parent_scope varTracker of
+  -- ToDo: Replace error with Result
+  Nothing   -> error "No parent scope found when there should be one"
+  Just avtu -> avtu
+
 
 addVariable :: Flattened.GeneralVariable -> ResultT (State ASMVariableTrackerUnlimited) UnlimitedRegister
 addVariable var = do

@@ -52,8 +52,8 @@ data Instruction =
     Branch UnlimitedRegister UnlimitedRegister Label
   | Binary ASMOp UnlimitedRegister UnlimitedRegister (Either UnlimitedRegister ASMLiteral)
   | Uniary ASMUniaryOp UnlimitedRegister (Either UnlimitedRegister ASMLiteral)
-  | IfStmt UnlimitedRegister [Instruction] Label [Instruction] Label
-  | WhileStmt Label UnlimitedRegister [Instruction] Label
+  | IfStmt UnlimitedRegister [ASMLine] Label [ASMLine] Label
+  | WhileStmt Label UnlimitedRegister [ASMLine] Label
   | Jump Label
   | FuncCall {
     arguments :: [UnlimitedRegister],
@@ -85,7 +85,8 @@ data ASMData = ASMData {
 data ASMFunc = ASMFunc {
   func_name :: Label,
   code      :: [ASMLine],
-  params    :: [UnlimitedRegister]
+  params    :: [UnlimitedRegister],
+  out_reg   :: Maybe UnlimitedRegister
 } deriving (Show, Eq, Ord)
 
 data ASMProgram = ASMProgram {
