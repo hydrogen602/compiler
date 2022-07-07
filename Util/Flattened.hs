@@ -16,10 +16,10 @@ import qualified Util.Types          as Types
 
 -- PseudoVariable are for holding temporary values
 -- Useful for splitting up complex expressions
-newtype PseudoVariable = PseudoVariable {getPseudoID :: Natural} deriving (Eq, Ord) -- with type in the future
+newtype PseudoVariable = PseudoVariable { getPseudoID :: Natural } deriving (Eq, Ord) -- with type in the future
 
 getPseudoVariable :: PseudoVariable -> String
-getPseudoVariable i = "$T" ++ show (getPseudoID i)
+getPseudoVariable i = "__tmp" ++ show (getPseudoID i)
 
 instance Show PseudoVariable where
   show = getPseudoVariable

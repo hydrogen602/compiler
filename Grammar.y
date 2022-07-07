@@ -97,6 +97,7 @@ Expr    : Expr '+' Expr                            { Expr ADD $1 $3 }
         | Expr '<' Expr                            { Expr LESS_THAN $1 $3 }
         | Value                                    { $1 }
         | var '(' Args ')'                         { FuncExpr (FunctionName $1) $3 }
+        | '(' Expr ')'                             { $2 }
 
 Value   : var                                      { Variabl (LocalVariable $1) }
         | int                                      { Immediate $1 }

@@ -3,7 +3,8 @@
 module ASM.Translate where
 
 import           Control.Arrow       (Arrow (second), (&&&))
-import           Control.Monad.State
+import           Control.Monad.State (MonadState (get), MonadTrans (lift),
+                                      State, evalState, modify)
 import           Data.Bifunctor      (Bifunctor (bimap), first)
 import           Data.Foldable       (fold, toList)
 import           Data.List           (isPrefixOf)
@@ -114,7 +115,7 @@ translateCode code asmData funcNameMapping returnReg = lines
     translate_one (Flattened.FuncCall func_name args return_var) = firstState $
       oneInstr $ FuncCall
         <$> traverse getVariable args
-        <*> fromMaybe (throwNameError $ name func_name)
+        <*> fromMaybe (throwError UnknownFunctionError $ name func_name)
           (Map.lookup func_name funcNameMapping)
         <*> traverse getVariable return_var
     translate_one (Flattened.IfStmt condition if_block else_block) = do

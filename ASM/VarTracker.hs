@@ -129,7 +129,7 @@ addVariable :: Flattened.GeneralVariable -> ResultT (State ASMVariableTrackerUnl
 addVariable var = do
   (varTracker, counter_val) <- gets $ var_mapping &&& counter
   if Map.member var varTracker then
-    throwNameError $ Nameable.name var
+    throwError DuplicateNameError $ Nameable.name var
   else do
     modify $ \varTrack -> varTrack{counter=counter_val+1, var_mapping=Map.insert var counter_val varTracker}
 
@@ -138,21 +138,19 @@ addVariable var = do
 -- this should not modify the state
 getVariable :: Flattened.GeneralVariable -> ResultT (State ASMVariableTrackerUnlimited) UnlimitedRegister
 getVariable var = do
-  let throw = throwNameError $ Nameable.name var
+  let throw = throwError UnknownVariableError $ Nameable.name var
 
   varTracker <- gets var_mapping
   case Map.lookup var varTracker of
     Just s  -> pure $ UnlimitedRegister s
     Nothing -> do
       parentScope <- fromMaybeResult throw $ gets parent_scope
-      let
-        eval = flip evalState parentScope
       -- ToDo: replace with withState
-      toTransformer $ fromTransformer eval $ getVariable var
+      liftInner $ evalInner (getVariable var) parentScope
 
 getOrAddVariable :: Flattened.GeneralVariable -> ResultT (State ASMVariableTrackerUnlimited) UnlimitedRegister
 getOrAddVariable var = do
-  maybeRegister <- catch NameError $ getVariable var
+  maybeRegister <- catch UnknownVariableError $ getVariable var
   case maybeRegister of
     Nothing -> addVariable var
     Just ur -> pure ur

@@ -87,3 +87,8 @@ find f ls = case filter f ls of
   []  -> Nothing
   a:_ -> Just a
 
+
+(<.>) :: Functor f => (b -> c) -> (a -> f b) -> (a -> f c)
+(<.>) f fm = fmap f . fm
+
+infixr 9 <.>

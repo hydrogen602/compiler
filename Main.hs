@@ -2,24 +2,26 @@
 import           Control.Monad.State
 import           Data
 import           Data.Char
-import           Data.List           as List
-import qualified Data.Map.Strict     as Map
+import           Data.List            as List
+import qualified Data.Map.Strict      as Map
 import           Debug.Trace
 import           Numeric.Natural
-import           System.Environment  (getArgs)
+import           System.Environment   (getArgs)
 
-import           ASM.CodeGen         ()
-import           ASM.Translate       (translateMain)
-import           CodeGen.Generator   (writeToStdout)
+import           ASM.CodeGen          ()
+import           ASM.Translate        (translateMain)
+import           CodeGen.Generator    (writeToFile, writeToStdout)
 
+import           Control.Monad.Except (runExceptT)
 import           Grammar
 import           Translator
-import           Util.AST            (astToProgram)
-import           Util.Classes        (Empty (empty))
-import           Util.CompileResult  (runResultT)
-import           Util.Flattened      (transformMany, transformProgram)
-import           Util.Literals       (ConstValue (ConstValueStr), Consts (..))
-import qualified Util.Types          as Types
+import           Util.AST             (astToProgram)
+import           Util.Classes         (Empty (empty))
+import           Util.CompileResult
+import           Util.Flattened       (transformMany, transformProgram)
+import           Util.FlattenedGen    ()
+import           Util.Literals        (ConstValue (ConstValueStr), Consts (..))
+import qualified Util.Types           as Types
 import           Util.Util
 import           Validator
 import           Variable
@@ -111,25 +113,28 @@ main = do
     Nothing       -> getContents
 
   let -- config output
-      outFileName = case argumentExtract "-o" args of
-        (Just outFile) -> outFile
-        Nothing        -> "out.s"
+    outFileName = case argumentExtract "-o" args of
+      (Just outFile) -> outFile
+      Nothing        -> "out.s"
 
-      -- funcHelper :: Map.Map String ConstValue -> [Function] -> (Map.Map String ConstValue, [Function])
-      -- funcHelper consts [] = (consts, [])
-      -- funcHelper consts ((CFunc name stmts args) : funcs) =
-      --   let (postConsts, postFuncs) = funcHelper consts funcs
-      --       (finalStmts, finalConsts) = runState (printLiteralProcessor stmts) postConsts
-      --    in --printLiteralProcessor postConsts stmts
+    -- funcHelper :: Map.Map String ConstValue -> [Function] -> (Map.Map String ConstValue, [Function])
+    -- funcHelper consts [] = (consts, [])
+    -- funcHelper consts ((CFunc name stmts args) : funcs) =
+    --   let (postConsts, postFuncs) = funcHelper consts funcs
+    --       (finalStmts, finalConsts) = runState (printLiteralProcessor stmts) postConsts
+    --    in --printLiteralProcessor postConsts stmts
 
-      --       (finalConsts, CFunc name finalStmts args : postFuncs)
+    --       (finalConsts, CFunc name finalStmts args : postFuncs)
 
-      -- parse
-      ast = parser (s ++ "\n") -- verify .
-      program = astToProgram ast
-      p2 = evalState (transformProgram program) 0
+    -- parse
+    ast = parser (s ++ "\n") -- verify .
+    program = astToProgram ast
+    p2 = evalState (transformProgram program) 0
 
-      asm = evalState (runResultT $ translateMain p2) (empty, empty)
+  writeToFile p2 Nothing
+
+  let
+    asm = evalState (fromSuccess $ translateMain p2) (empty, empty)
 
 
 

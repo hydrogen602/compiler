@@ -1,57 +1,41 @@
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TupleSections         #-}
 
 module Util.CompileResult where
-import           Control.Monad.Identity    (Identity (Identity, runIdentity))
-import           Control.Monad.State       (State, StateT (StateT), runStateT,
-                                            state, withState)
-import qualified Control.Monad.State       as StateModule
-import           Control.Monad.State.Class (MonadState (get, put), gets, modify)
-import           Control.Monad.Trans       (MonadTrans (lift))
+import           Control.Monad.Identity     (Identity (Identity, runIdentity))
+import           Control.Monad.State        (State, StateT (StateT), evalState,
+                                             runState, runStateT, state,
+                                             withState)
+import qualified Control.Monad.State        as StateModule
+import           Control.Monad.State.Class  (MonadState (get, put), gets,
+                                             modify)
+import           Control.Monad.Trans        (MonadTrans (lift))
 
-import           Data.Bifunctor            (Bifunctor (first, second))
-import           Util.Util                 (ddot)
+import           Control.Monad.Trans.Except
+import           Data.Bifunctor             (Bifunctor (first, second))
 
-data ResultBox a =
-  ResultBoxFailed {
+import           Util.Util                  (ddot, (<.>))
+
+data ResultFailed = ResultFailed {
     errType :: ErrorType,
     errMsg  :: String
-  }
-  | ResultBox {
-    value :: a
   } deriving (Eq, Ord)
 
-instance Show (ResultBox a) where
-  show ResultBoxFailed{errType=errType, errMsg=errMsg} =
+instance Show ResultFailed where
+  show ResultFailed{errType=errType, errMsg=errMsg} =
     show errType ++ ": " ++ errMsg
-  show ResultBox{value=value} = "Success"
 
 
-newtype ResultT m a = ResultT { runResultT :: m (ResultBox a) } --deriving (Eq, Ord, Show)
-
-instance Functor (ResultT m) where
-  fmap f result = ResultT (f <$> runResultT result)
-
-instance Applicative m => Applicative (ResultT m) where
-  rmf <*> rma = ResultT $ runResultT rmf <*> runResultT rma
-  pure = ResultT . pure
-
-instance Monad m => Monad (ResultT m) where
-  rma >>= f = ResultT $ do
-    resultBox <- runResultT rma
-    case resultBox of
-      (ResultBox val) -> runResultT (f val)
-      r               -> r
-
-instance MonadTrans ResultT where
-  lift = ResultT
-
-
+type ResultT = ExceptT ResultFailed
 type Result = ResultT Identity
 
+
 data ErrorType =
-    NameError
+    UnknownVariableError
+  | UnknownFunctionError
+  | DuplicateNameError
   | ArgumentError
   | UnexpectedError
   -- ^ for crashes that are due to internal issues with the compiler
@@ -60,54 +44,45 @@ data ErrorType =
   | TypeError
   deriving (Show, Eq, Ord)
 
-throwError :: ErrorType -> String -> ResultT m a
-throwError = ResultTFailed
+throwError :: Monad m => ErrorType -> String -> ResultT m a
+throwError = throwE `ddot` ResultFailed
 
-throwNameError :: String -> ResultT m a
-throwNameError = ResultTFailed NameError
+throwArgumentError ::  Monad m => String -> ResultT m a
+throwArgumentError = throwE . ResultFailed ArgumentError
 
-throwArgumentError :: String -> ResultT m a
-throwArgumentError = ResultTFailed ArgumentError
-
-throwUnexpectedError :: String -> ResultT m a
-throwUnexpectedError = ResultTFailed UnexpectedError
+throwUnexpectedError ::  Monad m => String -> ResultT m a
+throwUnexpectedError = throwE . ResultFailed UnexpectedError
 
 catchAll :: Applicative m => ResultT m a -> ResultT m (Maybe a)
-catchAll re = ResultT $ do
-  box <- runResultT re
-  pure $ case box of
-    (ResultBox val)                  -> ResultBox $ Just val
-    (ResultBoxFailed errType errMsg) -> ResultBox Nothing
+catchAll re = undefined -- catchE
 
 catch :: Applicative m => ErrorType -> ResultT m a -> ResultT m (Maybe a)
-catch err re = ResultT $ do
-  box <- runResultT re
-  pure $ case box of
-    (ResultBox val)                  -> ResultBox $ Just val
-    (ResultBoxFailed errType errMsg) ->
-      if errType == err then ResultBox $ Nothing
-      else ResultBoxFailed errType errMsg
+catch err re = undefined -- catchE
 
 -- ResultT manipulation helpers
 
-fromTransformer :: (m a -> b) -> ResultT m a -> Result b
-fromTransformer runMonad = mapInnerMonad (Identity . runMonad)
+-- fromTransformer :: (m a -> b) -> ResultT m a -> Result b
+-- fromTransformer runMonad = mapExceptT (Identity . runMonad)
+--   where
+--     f = runMonad
 
 toTransformer :: Monad m => Result a -> ResultT m a
-toTransformer = mapInnerMonad (pure . runIdentity)
-
-runResultTEither :: ResultT m a -> m (Either (ErrorType, String) a)
-runResultTEither (ResultT ma)                  = do
-  box <- ma
-  pure $ case box of
-    (ResultBox a)                    -> Right a
-    (ResultBoxFailed errType errMsg) -> Left (errType, errMsg)
+toTransformer = mapExceptT (pure . runIdentity)
 
 fromMaybeResult :: Monad m => ResultT m a -> ResultT m (Maybe a) -> ResultT m a
 fromMaybeResult throwable = (>>= maybe throwable pure)
 
 fromMaybe :: Monad m => ResultT m a -> Maybe a -> ResultT m a
 fromMaybe throwable = maybe throwable pure
+
+mapInnerMonad :: (m1 (Either ResultFailed a) -> m2 (Either ResultFailed b)) -> ResultT m1 a -> ResultT m2 b
+mapInnerMonad f = ExceptT . f . runExceptT
+
+fromSuccess :: Monad m => ResultT m a -> m a
+fromSuccess r = runExceptT r >>= \case
+    Left rf -> error $ show rf
+    Right a -> pure a
+
 
 -- mapInnerMonad :: (m1 a -> m2 b) -> ResultT m1 a -> ResultT m2 b
 -- mapInnerMonad mapFunc result = ResultT $ mapFunc (runResultT result)
@@ -116,17 +91,11 @@ fromMaybe throwable = maybe throwable pure
 --     func :: m1 (ResultBox a) -> m2 (ResultBox b)
 --     func
 
-
 -- Monad Specific
-instance MonadState s (ResultT (State s)) where
-  get = ResultT $ StateModule.gets ResultBox
-  put s = ResultT $ ResultBox <$> StateModule.put
+-- instance MonadState s (ResultT (State s)) where
+--   get = ExceptT $ StateModule.gets Right
+--   put = ExceptT . Right <.> StateModule.put
 
--- firstState :: ResultT (State a) c -> a -> ResultT (State (a, b)) c
--- firstState input st = t
---   where
---     x = fromTransformer (`runState` st) input
---     t = toTransformer x
 
 getFirst :: ResultT (State (a, b)) a
 getFirst = gets fst
@@ -134,18 +103,29 @@ getFirst = gets fst
 putFirst :: a -> ResultT (State (a, b)) ()
 putFirst a = modify (\(_, b) -> (a, b))
 
+
 firstState :: ResultT (State a) c -> ResultT (State (a, b)) c
-firstState = mapInnerMonad $ state . uncurry . flip . flip withOther
+firstState result = ExceptT $ state $ uncurry $ flip withOther
   where
-    stateModifer = runIdentity `ddot` runStateT
-    withOther b = second (,b) `ddot` stateModifer
+    func = runState $ runExceptT result
+    withOther b = second (,b) . func
 
 secondState :: ResultT (State b) c -> ResultT (State (a, b)) c
-secondState = mapInnerMonad $ state . uncurry . flip withOther
+secondState result = ExceptT $ state $ uncurry withOther
   where
-    stateModifer = runIdentity `ddot` runStateT
-    withOther a = second (a,) `ddot` stateModifer
+    func = runState $ runExceptT result
+    withOther a = second (a,) . func
 
 withStateResultT :: (s -> s) -> ResultT (State s) a -> ResultT (State s) a
-withStateResultT = mapInnerMonad . withState
+withStateResultT f = ExceptT . withState f . runExceptT
 
+
+evalInner :: ResultT (State s) a -> s -> Result a
+evalInner result init = ExceptT $ Identity x
+  where
+    x = evalState (runExceptT result) init
+
+liftInner :: Result a -> ResultT (State s) a
+liftInner result = ExceptT $ pure r
+  where
+    r = runIdentity $ runExceptT result
