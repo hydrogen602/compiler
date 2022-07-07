@@ -1,7 +1,7 @@
 .PHONY: all clean xclean run
 
 
-SRCS = $(wildcard *.hs) $(wildcard Util/*.hs)
+SRCS = $(shell find . -type f -name '*.hs')
 
 GENERATED = Lexer.hs Grammar.hs
 

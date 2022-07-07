@@ -46,21 +46,21 @@ translateMain :: Flattened.Program2 -> ResultT (State (ASMVariableTrackerUnlimit
 translateMain (Flattened.Program2 funcs consts code) = do
   let
     funcNameToLabel = Label . name
-    funcNameMapping = Map.fromSet funcNameToLabel $ Map.keysSet funcs
 
-    extraLiterals = foldMap ((:[]) . Flattened.literals) funcs
-
-    -- the implicit main function is dealt a bit specially here
-    -- so other functions can't refer to main
+    -- fix this, right now other functions can refer to implicit main
     mainFunc = Flattened.Function2
       (Util.Types.FunctionName $ name mainFuncName)
       [] code empty
 
     withMain = Map.insert (Flattened.functionName mainFunc) mainFunc funcs
 
+    funcNameMapping = Map.fromSet funcNameToLabel $ Map.keysSet withMain
+
+    extraLiterals = foldMap ((:[]) . Flattened.literals) withMain
+
+
   -- set up labels, main + all func ones
-  secondState $
-    addLabel mainFuncName >> traverse addLabel funcNameMapping
+  secondState $ traverse addLabel funcNameMapping
 
   asmData <- toTransformer $ translateConsts consts extraLiterals
 
@@ -87,15 +87,15 @@ translateCode code asmData funcNameMapping returnReg = lines
     translate_one :: Flattened.Stmt2 -> ResultT (State (ASMVariableTrackerUnlimited, ASMLabelTracker)) [ASMLine]
     translate_one (Flattened.LetStmt var) = firstState $ addVariable (Right var) >> pure []
     translate_one (Flattened.AssignLiteralStmt var num) = firstState $ do
-      register <- getVariable var
+      register <- getOrAddVariable var
       pureOneInstr $ Uniary SET register $ Right $ ASMLiteral num
     translate_one (Flattened.AssignStmt varToSet varToGet) = firstState $
       oneInstr $ Uniary SET
-        <$> getVariable varToSet
+        <$> getOrAddVariable varToSet
         <*> (Left <$> getVariable varToGet)
     translate_one (Flattened.BinaryFuncStmt op varToSet var1 var2) = firstState $
       oneInstr $ Binary (opToASM op)
-        <$> getVariable varToSet
+        <$> getOrAddVariable varToSet
         <*> getVariable var1
         <*> (Left <$> getVariable var2)
     translate_one (Flattened.PrintStmt nl var) = firstState $ do
@@ -117,7 +117,7 @@ translateCode code asmData funcNameMapping returnReg = lines
         <$> traverse getVariable args
         <*> fromMaybe (throwError UnknownFunctionError $ name func_name)
           (Map.lookup func_name funcNameMapping)
-        <*> traverse getVariable return_var
+        <*> traverse getOrAddVariable return_var
     translate_one (Flattened.IfStmt condition if_block else_block) = do
       cond_reg <- firstState $ getVariable condition
       (l1, l2) <- secondState $ lift getIfLabels

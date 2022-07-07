@@ -2,7 +2,7 @@
 
 module Util.Flattened where
 
-import           Control.Monad.State (MonadState (..), State, gets)
+import           Control.Monad.State (MonadState (..), State, gets, modify)
 import           Data.Foldable       (Foldable (fold))
 import qualified Data.Map.Strict     as Map
 import           Numeric.Natural     (Natural)
@@ -49,7 +49,10 @@ data Stmt2 =
   deriving (Show, Eq, Ord)
 
 getNewPseudoVar :: State Natural PseudoVariable
-getNewPseudoVar = gets PseudoVariable
+getNewPseudoVar = do
+  var <- gets PseudoVariable
+  modify (+1)
+  pure var
 
 getNewGeneralVar :: State Natural GeneralVariable
 getNewGeneralVar = Left <$> getNewPseudoVar

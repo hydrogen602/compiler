@@ -8,6 +8,7 @@ module ASM.VarTracker (
   popScope,
   addVariable,
   getVariable,
+  getOrAddVariable,
   specialPrefixes,
   literalConstPrefix
   ) where

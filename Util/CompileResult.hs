@@ -12,6 +12,7 @@ import qualified Control.Monad.State        as StateModule
 import           Control.Monad.State.Class  (MonadState (get, put), gets,
                                              modify)
 import           Control.Monad.Trans        (MonadTrans (lift))
+import           Data.Functor               ((<&>))
 
 import           Control.Monad.Trans.Except
 import           Data.Bifunctor             (Bifunctor (first, second))
@@ -56,8 +57,10 @@ throwUnexpectedError = throwE . ResultFailed UnexpectedError
 catchAll :: Applicative m => ResultT m a -> ResultT m (Maybe a)
 catchAll re = undefined -- catchE
 
-catch :: Applicative m => ErrorType -> ResultT m a -> ResultT m (Maybe a)
-catch err re = undefined -- catchE
+catch :: Monad m => ErrorType -> ResultT m a -> ResultT m (Maybe a)
+catch err re = ExceptT $ runExceptT re <&> \case
+  Left e  -> if errType e == err then Right Nothing else Left e
+  Right a -> Right $ Just a
 
 -- ResultT manipulation helpers
 

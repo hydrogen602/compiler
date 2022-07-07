@@ -51,7 +51,8 @@ import qualified Data.Map.Strict as Map
 
 %%
 
-Start   : CStmt '\n' Start                         { startHelper ($1) ($3) }
+Start   : '\n' Start                               { $2 }
+        | CStmt '\n' Start                         { startHelper ($1) ($3) }
         | Block                                    { fromStmts ($1) }
 
 CStmt   : const var '=' str                            { Left (ConstName ($2), ConstValueStr ($4)) }
