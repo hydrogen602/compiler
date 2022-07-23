@@ -8,6 +8,7 @@ Grammar.hs
 out*
 build
 *.log
+dist-newstyle
 
 # Test stuff
 tests/tmp.s

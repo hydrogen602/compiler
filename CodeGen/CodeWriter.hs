@@ -46,3 +46,8 @@ space = Writer.writer ((), " ")
 
 quote :: String -> LineWriter ()
 quote s = Writer.writer ((), "\"" ++ s ++ "\"")
+
+writeLine :: LineWriter a -> CodeWriter a
+writeLine line = undefined
+  where
+    (a, w) = Writer.runWriter line
