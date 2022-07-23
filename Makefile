@@ -1,34 +1,24 @@
-.PHONY: all clean xclean run
+.PHONY: build xclean run
 
-
-SRCS = $(shell find . -type f -name '*.hs')
+SRCS = $(shell find app -type f -name '*.hs')
 
 GENERATED = Lexer.hs Grammar.hs
 
 export PATH := /opt/homebrew/opt/llvm@11/bin:$(PATH)
-# export PATH="/opt/homebrew/opt/llvm@11/bin:$PATH"
+export LDFLAGS := -L/opt/homebrew/opt/llvm@11/lib
+export CPPFLAGS := -I/usr/homebrew/opt/llvm@11/include
 
-# all: Main
-# 	@echo "Running Main"
-# 	@./Main
+run: ${SRCS} ${GENERATED}
+	cabal run compiler -- -i test.idk
 
-run: Main
-	./Main -i test.idk
-
-Main: ${SRCS} ${GENERATED}
-	ghc Main.hs -hidir build -odir build
+build: ${SRCS} ${GENERATED}
+	cabal build compiler
 
 Lexer.hs: Lexer.x
-	alex Lexer.x
+	alex Lexer.x --outfile=app/Lexer.hs
 
-Grammar.hs: Grammar.y Token.hs Lexer.hs
-	happy Grammar.y
-
-Grammar: Grammar.hs
-	ghc Grammar.hs
-
-clean:
-	rm -rf Main build/*
+Grammar.hs: Grammar.y app/Token.hs app/Lexer.hs
+	happy Grammar.y --outfile=app/Grammar.hs
 
 xclean: clean
 	rm -f ${GENERATED}

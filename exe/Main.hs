@@ -1,4 +1,3 @@
--- import           AST
 import           Control.Monad.State
 import           Data
 import           Data.Char
@@ -14,7 +13,6 @@ import           CodeGen.Generator    (writeToFile, writeToStdout)
 
 import           Control.Monad.Except (runExceptT)
 import           Grammar
-import           Translator
 import           Util.AST             (astToProgram)
 import           Util.Classes         (Empty (empty))
 import           Util.CompileResult
@@ -23,8 +21,6 @@ import           Util.FlattenedGen    ()
 import           Util.Literals        (ConstValue (ConstValueStr), Consts (..))
 import qualified Util.Types           as Types
 import           Util.Util
-import           Validator
-import           Variable
 
 
 --translate (ConstStmt name value) varTable = undefined
