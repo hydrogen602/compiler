@@ -21,7 +21,7 @@ import qualified LLVM.AST.Type              as Types
 import qualified LLVM.IRBuilder             as Module
 import qualified LLVM.IRBuilder.Instruction as I
 import qualified LLVM.IRBuilder.Monad       as M
-import           LLVM.Prelude               (ShortByteString)
+import           LLVM.Prelude               (ShortByteString, traverse_)
 import           LLVM.Pretty                (ppllvm)
 
 
@@ -29,7 +29,8 @@ import qualified Extras.Scope               as Scope
 import           Util.Classes               (Empty (empty), Nameable (..))
 import           Util.Literals              (ConstValue)
 import           Util.Types                 (Expr (..), Function (..),
-                                             FunctionName, Op (..),
+                                             FunctionName (FunctionName),
+                                             LocalVariable, Op (..),
                                              Program (..), Stmt (..))
 
 import           Extras.Conversion          (Into (into))
@@ -50,6 +51,8 @@ generateModule (Program func_mapping consts code) = evalState m empty
       forM_ code generateStmt
 
     code_state = do
+      f <- Module.extern "f" [Types.i32] Types.i32
+      addFunction (FunctionName "f") f
       funcs
       main
 
@@ -75,15 +78,21 @@ generateExpr (FuncExpr f_name params) = do
   I.call f $ map (,[]) params_ops
 
 
+makeNewVar :: LocalVariable -> CodeGen Operand
+makeNewVar lv = do
+  let
+    n = into $ name lv :: Name
+    var = LocalReference Types.i32 n
+  var <- I.alloca Types.i32 Nothing 0
+  addVariable lv var
+  pure var
+
+
 generateStmt :: Stmt -> CodeGen ()
 generateStmt = \case
   LetStmt lv ex          -> do
-    let
-      n = into $ name lv :: Name
-      var = LocalReference Types.i32 n
-    var <- I.alloca Types.i32 Nothing 0
+    var <- makeNewVar lv
     val <- generateExpr ex
-    addVariable lv var
     -- see https://llvm.org/docs/LangRef.html#store-instruction
     I.store var 0 val
   AssignStmt lv ex       -> do
@@ -109,7 +118,12 @@ generateFuncs (Function func_name params code literals) = mdo
   let param_names = map (toShortByteString . name) params
 
   f <- Module.function (mkName $ name func_name) (map ((Types.i32,) . Module.ParameterName) param_names) Types.i32 $ \param_ops -> do
-    let param_lookup = Map.fromList $ zip params param_ops
+    let params_pairs = zip params param_ops
+    traverse_ (\(name, op) -> do
+      -- TODO: copying all args doesn't seem great
+      var_op <- makeNewVar name
+      I.store var_op 0 op
+      ) params_pairs
 
     forM_ code generateStmt
 
