@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 
-module ASM.Translate where
+module ASM.Translate (translate) where
 
 import           Control.Arrow       (Arrow (second), (&&&))
 import           Control.Monad.State (MonadState (get), MonadTrans (lift),
@@ -19,6 +19,10 @@ import           Util.CompileResult
 import qualified Util.Flattened      as Flattened
 import qualified Util.Literals       as Literals
 import qualified Util.Types
+
+
+translate :: Flattened.Program2 -> Result ASMProgram
+translate = flip evalInner (empty, empty) . translateMain
 
 
 mainFuncName :: Label

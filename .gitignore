@@ -14,3 +14,4 @@ dist-newstyle
 tests/tmp.s
 **/__pycache__
 
+a.out

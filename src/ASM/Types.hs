@@ -3,6 +3,7 @@ module ASM.Types where
 import qualified Data.Map        as Map
 import           Numeric.Natural (Natural)
 
+import           Util.Classes    (Nameable)
 import qualified Util.Classes    as Classes
 import qualified Util.Literals   as Literals
 import           Util.Types      (UseNewLine)
@@ -18,6 +19,10 @@ data UnlimitedRegister =
   | OneTypeSpecialRegister
   -- ^ a special register only for specific tasks in the ladder stages of the compiler
   deriving (Show, Eq, Ord)
+
+instance Nameable UnlimitedRegister where
+  name (UnlimitedRegister n)  = "U" ++ show n
+  name OneTypeSpecialRegister = "UExtra"
 
 newtype ASMLiteral = ASMLiteral { getLiteral :: Int } deriving (Show, Eq, Ord)
 

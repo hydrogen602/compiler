@@ -53,7 +53,7 @@ import qualified Data.Map.Strict as Map
 
 Start   : '\n' Start                               { $2 }
         | CStmt '\n' Start                         { startHelper ($1) ($3) }
-        | Block                                    { fromStmts ($1) }
+        | Block Return                             { fromStmts ($1 ++ $2) }
 
 CStmt   : const var '=' str                            { Left (ConstName ($2), ConstValueStr ($4)) }
         | def var '(' Params ')' '{' Block Return '}'  { Right (ASTFunction (FunctionName ($2)) ($4) (($7)++($8))) }

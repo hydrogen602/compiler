@@ -1,6 +1,6 @@
-.PHONY: build xclean run
+.PHONY: build xclean clean run
 
-SRCS = $(shell find app -type f -name '*.hs')
+SRCS = $(shell find src -type f -name '*.hs')
 
 GENERATED = Lexer.hs Grammar.hs
 
@@ -8,17 +8,31 @@ export PATH := /opt/homebrew/opt/llvm@11/bin:$(PATH)
 export LDFLAGS := -L/opt/homebrew/opt/llvm@11/lib
 export CPPFLAGS := -I/usr/homebrew/opt/llvm@11/include
 
-run: ${SRCS} ${GENERATED}
-	cabal run compiler -- -i test.idk
+run: a.out
+	./a.out
+
+out.ll: ${SRCS} ${GENERATED}
+	cabal run exe:compiler -- -i test_basic.idk -o out.ll
+
+out.o: out.ll
+	PATH=${PATH} llc out.ll -filetype=obj
+
+a.out: out.o
+	@# I can't figure out llvm-link
+	ld out.o -lSystem -L$(shell xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib/
+
 
 build: ${SRCS} ${GENERATED}
-	cabal build compiler
+	cabal build exe:compiler
 
 Lexer.hs: Lexer.x
-	alex Lexer.x --outfile=app/Lexer.hs
+	alex Lexer.x --outfile=src/Lexer.hs
 
-Grammar.hs: Grammar.y app/Token.hs app/Lexer.hs
-	happy Grammar.y --outfile=app/Grammar.hs
+Grammar.hs: Grammar.y src/Token.hs src/Lexer.hs
+	happy Grammar.y --outfile=src/Grammar.hs
+
+clean:
+	cabal clean
 
 xclean: clean
 	rm -f ${GENERATED}

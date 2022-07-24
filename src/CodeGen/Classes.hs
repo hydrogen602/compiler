@@ -6,3 +6,4 @@ class CodeGeneratable a where
   generate :: a -> [String]
   fileEnding :: a -> String
   targetName :: a -> String
+

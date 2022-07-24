@@ -1,44 +1,7 @@
 module Util.Util where
-import           Data
 
 import           Control.Monad.State
 import           Data.List
-
-type LabelPrefix = String
-
-
-type SReg = String
-type TReg = String
-type AReg = String
-
-
-generateTmpReg :: Int -> TReg
-generateTmpReg n = "$t" ++ if n >= 0 && n < 10 then show n else error "Ran out of temporary registers"
-
-allTRegisters :: [TReg]
-allTRegisters = map (\n -> "$t" ++ show n) [0..9]
-
-allSRegisters :: [SReg]
-allSRegisters = map (\n -> "$s" ++ show n) [0..7]
-
-allARegisters :: [AReg]
-allARegisters = map (\n -> "$a" ++ show n) [0..3]
-
-printLabel :: String
-printLabel = "_printLn"
-
-printNewLineCode :: [Line]
-printNewLineCode = [
-    EmptyLine,
-    Label printLabel,
-    Instruction "li" ["$a0", "10"],
-    Instruction "li" ["$v0", "11"],
-    Instruction "syscall" [],
-    Instruction "jr" ["$ra"]
-    ]
-
-printNewLineCall :: [Line]
-printNewLineCall = [Instruction "jal" [printLabel]]
 
 unpackLs1 :: [a] -> a
 unpackLs1 [x] = x
