@@ -9,9 +9,10 @@ out*
 build
 *.log
 dist-newstyle
+libc/libc.a
+a.out
 
 # Test stuff
 tests/tmp.s
 **/__pycache__
 
-a.out

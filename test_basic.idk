@@ -1,5 +1,13 @@
 
 
 let c = 20
-print_int(c)
-return 3
+
+if 100 < c {
+  println(c)
+}
+else {
+  println(c)
+  println(c)
+}
+
+return 4

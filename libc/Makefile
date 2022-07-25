@@ -1,11 +1,25 @@
+# C Flags
+CPPFLAGS = -Wall -pedantic
+CC = gcc
+LDLIBS = -lm
 
-.PHONY: all
+# Env
+export PATH := /opt/homebrew/opt/llvm@11/bin:$(PATH)
+SHELL := env PATH=$(PATH) /bin/bash
 
+# Files
+SRCS := $(wildcard *.c)
+OBJS = $(SRCS:.c=.o)
 
-all: prelude.o
+.PHONY: all clean xclean
 
-prelude.o:
-	gcc -c prelude.c -o prelude.o
+all: ${OBJS}
+	llvm-ar r libc.a ${OBJS}
+
+$(objects): %.o: %.c
 
 clean:
 	rm -f *.o
+
+xclean: clean
+	rm -f *.a
