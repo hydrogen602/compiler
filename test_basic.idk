@@ -1,4 +1,5 @@
 
 
 let c = 20
-return f(c)
+print_int(c)
+return 3

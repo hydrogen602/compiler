@@ -46,13 +46,20 @@ generateModule (Program func_mapping consts code) = evalState m empty
   where
     funcs = mapM_ (withNewScope . generateFuncs) func_mapping
 
+    libFuncs = do
+      f <- Module.extern "print" [Types.i32] Types.i32
+      addFunction (FunctionName "print") f
+      f2 <- Module.extern "println" [Types.i32] Types.i32
+      addFunction (FunctionName "println") f2
+      f3 <- Module.extern "print_int" [Types.i32] Types.i32
+      addFunction (FunctionName "print_int") f3
+
     main :: LLVM Operand
     main = withNewScope $ Module.function "main" [] Types.i32 $ \[] -> do
       forM_ code generateStmt
 
     code_state = do
-      f <- Module.extern "f" [Types.i32] Types.i32
-      addFunction (FunctionName "f") f
+      libFuncs
       funcs
       main
 

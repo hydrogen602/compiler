@@ -1,4 +1,4 @@
-.PHONY: build xclean clean run
+.PHONY: build xclean clean run lib
 
 SRCS = $(shell find src -type f -name '*.hs')
 
@@ -8,8 +8,13 @@ export PATH := /opt/homebrew/opt/llvm@11/bin:$(PATH)
 export LDFLAGS := -L/opt/homebrew/opt/llvm@11/lib
 export CPPFLAGS := -I/usr/homebrew/opt/llvm@11/include
 
+EXTRAS = $(shell find libc -type f -name '*.o')
+
 run: a.out
 	./a.out
+
+lib:
+	$(MAKE) -C libc
 
 out.ll: ${SRCS} ${GENERATED}
 	cabal run exe:compiler -- -i test_basic.idk -o out.ll
@@ -17,9 +22,9 @@ out.ll: ${SRCS} ${GENERATED}
 out.o: out.ll
 	PATH=${PATH} llc out.ll -filetype=obj
 
-a.out: out.o
+a.out: out.o lib
 	@# I can't figure out llvm-link
-	ld out.o -lSystem -L$(shell xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib/
+	ld out.o ${EXTRAS} -lSystem -L$(shell xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib/
 
 
 build: ${SRCS} ${GENERATED}
@@ -33,6 +38,7 @@ Grammar.hs: Grammar.y src/Token.hs src/Lexer.hs
 
 clean:
 	cabal clean
+	$(MAKE) -C libc clean
 
 xclean: clean
 	rm -f ${GENERATED}
