@@ -10,4 +10,13 @@ else {
   println(c)
 }
 
+let x = 5
+let y = 1
+
+while 0 < x {
+  x = x + (-1)
+  print(x)
+}
+
+
 return 4

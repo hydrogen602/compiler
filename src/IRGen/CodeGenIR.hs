@@ -132,7 +132,7 @@ generateStmt = \case
   IfStmt ex sts_then sts_else     -> mdo
     cond <- generateExpr ex
     b <- I.icmp NE cond (ConstantOperand $ C.Int 32 0)
-    Module.condBr cond then_block else_block
+    Module.condBr b then_block else_block
 
     then_block <- Module.block `Module.named` "then"
     traverse_ generateStmt sts_then
@@ -143,8 +143,20 @@ generateStmt = \case
     checkForExit $ Module.br merge_block
 
     merge_block <- Module.block `Module.named` "merge"
-    return ()
-  WhileStmt ex sts       -> error "Not yet implemented"
+    pure ()
+  WhileStmt ex sts       -> mdo
+    Module.br cond_block
+    cond_block <- Module.block `Module.named` "while_condition"
+    cond <- generateExpr ex
+    b <- I.icmp NE cond (ConstantOperand $ C.Int 32 0)
+    Module.condBr b while_body break_block
+
+    while_body <- Module.block `Module.named` "while_body"
+    traverse_ generateStmt sts
+    Module.br cond_block
+
+    break_block <- Module.block `Module.named` "while_break"
+    pure ()
   ReturnStmt ex          -> generateExpr ex >>= I.ret
 
 
