@@ -12,6 +12,8 @@ import qualified LLVM.IRBuilder             as Module
 
 import           Control.Monad.Identity     (Identity (runIdentity))
 import qualified Extras.Scope               as Scope
+import           Types.Core                 (AType, TypeName)
+import qualified Types.Core                 as TC
 import           Util.Classes               (Empty (empty), Nameable (..))
 import           Util.CompileResult         (fromSuccess)
 import           Util.Literals              (ConstValue)
@@ -21,7 +23,8 @@ import           Util.Types                 (FunctionName, LocalVariable)
 data ProgramEnv = ProgramEnv {
   funcs  :: Map.Map FunctionName L.Operand,
   consts :: Map.Map ConstValue L.Operand,
-  locals :: Scope.Scope LocalVariable L.Operand
+  locals :: Scope.Scope LocalVariable L.Operand,
+  types  :: TC.TypeTracker
 }
 
 withNewScope :: MonadState ProgramEnv m => m a -> m a
@@ -33,7 +36,11 @@ withNewScope actionInScope = do
   pure a
 
 instance Empty ProgramEnv where
-  empty = ProgramEnv mempty mempty empty
+  empty = ProgramEnv mempty mempty empty mempty
+
+
+lookupType :: MonadState ProgramEnv m => TypeName -> m AType
+lookupType name = undefined
 
 
 addFunction :: MonadState ProgramEnv m => FunctionName -> L.Operand -> m ()

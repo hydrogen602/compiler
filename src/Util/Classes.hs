@@ -6,10 +6,10 @@ import           Extras.Conversion (Into (into))
 
 
 class Nameable a where
-    name :: a -> String
+    getName :: a -> String
 
 instance Nameable a => Into a String where
-    into = name
+    into = getName
 
 class Empty a where
     empty :: a

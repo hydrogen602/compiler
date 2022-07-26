@@ -14,7 +14,7 @@ import           Numeric.Natural
 
 import           ASM.Types
 import           ASM.VarTracker
-import           Util.Classes        (empty, name)
+import           Util.Classes        (empty, getName)
 import           Util.CompileResult
 import qualified Util.Flattened      as Flattened
 import qualified Util.Literals       as Literals
@@ -35,7 +35,7 @@ translateFunc ::
   -> Map.Map Util.Types.FunctionName Label
   -> ResultT (State (ASMVariableTrackerUnlimited, ASMLabelTracker)) ASMFunc
 translateFunc (Flattened.Function2 func_name params code _) asmData funcNameMapping = do
-  func_label <- fromMaybe (throwUnexpectedError $ "Could not find own function name in " ++ name func_name) $ Map.lookup func_name funcNameMapping
+  func_label <- fromMaybe (throwUnexpectedError $ "Could not find own function name in " ++ getName func_name) $ Map.lookup func_name funcNameMapping
   let result = OneTypeSpecialRegister
 
   (lines, param_regs) <- mapInnerMonad withTrackerScope $ do
@@ -49,11 +49,11 @@ translateFunc (Flattened.Function2 func_name params code _) asmData funcNameMapp
 translateMain :: Flattened.Program2 -> ResultT (State (ASMVariableTrackerUnlimited, ASMLabelTracker)) ASMProgram
 translateMain (Flattened.Program2 funcs consts code) = do
   let
-    funcNameToLabel = Label . name
+    funcNameToLabel = Label . getName
 
     -- fix this, right now other functions can refer to implicit main
     mainFunc = Flattened.Function2
-      (Util.Types.FunctionName $ name mainFuncName)
+      (Util.Types.FunctionName $ getName mainFuncName)
       [] code empty
 
     withMain = Map.insert (Flattened.functionName mainFunc) mainFunc funcs
@@ -119,7 +119,7 @@ translateCode code asmData funcNameMapping returnReg = lines
     translate_one (Flattened.FuncCall func_name args return_var) = firstState $
       oneInstr $ FuncCall
         <$> traverse getVariable args
-        <*> fromMaybe (throwError UnknownFunctionError $ name func_name)
+        <*> fromMaybe (throwError UnknownFunctionError $ getName func_name)
           (Map.lookup func_name funcNameMapping)
         <*> traverse getOrAddVariable return_var
     translate_one (Flattened.IfStmt condition if_block else_block) = do
@@ -162,9 +162,9 @@ translateConsts (Literals.Consts named (Literals.Literals2 literals)) extraLiter
 
     convert_one_named :: Literals.ConstName -> Literals.ConstValue -> Result (Label, Literals.ConstValue)
     convert_one_named const_name const_value
-      | any (`isPrefixOf` name const_name) specialPrefixes =
-        throwError InvalidVariableNameError $ name const_name
-      | otherwise = pure (Label (name const_name), const_value)
+      | any (`isPrefixOf` getName const_name) specialPrefixes =
+        throwError InvalidVariableNameError $ getName const_name
+      | otherwise = pure (Label (getName const_name), const_value)
 
     convert_one_literal :: Literals.ConstValue -> State Natural Label
     convert_one_literal const_value = do

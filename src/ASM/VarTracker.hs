@@ -68,12 +68,12 @@ instance Classes.Empty ASMLabelTracker where
 
 addLabel :: Label -> ResultT (State ASMLabelTracker) ()
 addLabel label
-  | any (`isPrefixOf` Nameable.name label) specialPrefixes =
-    throwError InvalidVariableNameError $ Nameable.name label
+  | any (`isPrefixOf` Nameable.getName label) specialPrefixes =
+    throwError InvalidVariableNameError $ Nameable.getName label
   | otherwise = do
     labels <- gets all_labels
     if label `elem` labels then
-      throwError LabelConflictError $ Nameable.name label
+      throwError LabelConflictError $ Nameable.getName label
     else
       modify (\tracker@ASMLabelTrackerConstructor{all_labels=l} -> tracker{all_labels=Set.insert label l})
 
@@ -130,7 +130,7 @@ addVariable :: Flattened.GeneralVariable -> ResultT (State ASMVariableTrackerUnl
 addVariable var = do
   (varTracker, counter_val) <- gets $ var_mapping &&& counter
   if Map.member var varTracker then
-    throwError DuplicateNameError $ Nameable.name var
+    throwError DuplicateNameError $ Nameable.getName var
   else do
     modify $ \varTrack -> varTrack{counter=counter_val+1, var_mapping=Map.insert var counter_val varTracker}
 
@@ -139,7 +139,7 @@ addVariable var = do
 -- this should not modify the state
 getVariable :: Flattened.GeneralVariable -> ResultT (State ASMVariableTrackerUnlimited) UnlimitedRegister
 getVariable var = do
-  let throw = throwError UnknownVariableError $ Nameable.name var
+  let throw = throwError UnknownVariableError $ Nameable.getName var
 
   varTracker <- gets var_mapping
   case Map.lookup var varTracker of

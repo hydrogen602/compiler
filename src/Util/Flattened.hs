@@ -7,7 +7,7 @@ import           Data.Foldable       (Foldable (fold))
 import qualified Data.Map.Strict     as Map
 import           Numeric.Natural     (Natural)
 
-import           Util.Classes        (Empty (empty), Nameable (name))
+import           Util.Classes        (Empty (empty), Nameable (..))
 import           Util.Literals       as Literals2
 import           Util.Types          (FunctionName, LocalVariable, Op,
                                       UseNewLine (..))
@@ -25,13 +25,13 @@ instance Show PseudoVariable where
   show = getPseudoVariable
 
 instance Nameable PseudoVariable where
-  name = getPseudoVariable
+  getName = getPseudoVariable
 
 type GeneralVariable = Either PseudoVariable LocalVariable
 
 instance Nameable (Either PseudoVariable LocalVariable) where
-  name (Left a)  = name a
-  name (Right a) = name a
+  getName (Left a)  = getName a
+  getName (Right a) = getName a
 
 -- Flattend Statements
 -- no complex expression but just binary ones

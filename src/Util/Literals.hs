@@ -6,7 +6,7 @@ import qualified Data.Map        as Map
 import qualified Data.Set        as Set
 import           Numeric.Natural (Natural)
 
-import           Util.Classes    (Empty (..), Nameable (name))
+import           Util.Classes    (Empty (..), Nameable (..))
 import           Util.Util       (ddot)
 
 newtype ConstName = ConstName {getConstName :: String} deriving (Show, Eq, Ord)
@@ -30,7 +30,7 @@ instance Empty Consts where
     empty = Consts mempty empty
 
 instance Nameable ConstName where
-  name = getConstName
+  getName = getConstName
 
 -- getNextFreeConstNum :: Consts -> Int
 -- getNextFreeConstNum Consts{getLiterals=mapping} =

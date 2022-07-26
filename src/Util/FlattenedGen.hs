@@ -9,7 +9,7 @@ import           Data.List                         (intersperse)
 
 import           CodeGen.Classes                   (CodeGeneratable (..))
 import           Token                             (Token (NewLine))
-import           Util.Classes                      (Nameable (name))
+import           Util.Classes                      (Nameable (..))
 import           Util.Flattened
 import           Util.Literals                     (ConstValue (..),
                                                     Consts (..))
@@ -29,36 +29,36 @@ quote s = "\"" ++ s ++ "\""
 
 
 commaSeperateVars :: Nameable a => [a] -> [Char]
-commaSeperateVars = fold . intersperse ", " . map name
+commaSeperateVars = fold . intersperse ", " . map getName
 
 
 convertOneStmt2 :: Stmt2 -> Writer [String] ()
 convertOneStmt2 stmt2 = case stmt2 of
   LetStmt lv                -> pure ()
-  AssignLiteralStmt e n     -> oneLine $ name e ++ " = " ++ show n
-  AssignStmt e e'           -> oneLine $ name e ++ " = " ++ name e'
-  BinaryFuncStmt op e e' e2 -> oneLine $ name e ++ " = " ++ name e' ++ convertOp op ++ name e2
-  PrintStmt NoUseNewLine e           -> oneLine $ "process.stdout.write(" ++ name e ++ ")"
-  PrintStmt UseNewLine e           -> oneLine $ "console.log(" ++ name e ++ ")"
+  AssignLiteralStmt e n     -> oneLine $ getName e ++ " = " ++ show n
+  AssignStmt e e'           -> oneLine $ getName e ++ " = " ++ getName e'
+  BinaryFuncStmt op e e' e2 -> oneLine $ getName e ++ " = " ++ getName e' ++ convertOp op ++ getName e2
+  PrintStmt NoUseNewLine e           -> oneLine $ "process.stdout.write(" ++ getName e ++ ")"
+  PrintStmt UseNewLine e           -> oneLine $ "console.log(" ++ getName e ++ ")"
   PrintLiteralStmt NoUseNewLine str  -> oneLine $ "process.stdout.write(" ++ quote str ++ ")"
   PrintLiteralStmt UseNewLine str  -> oneLine $ "console.log(" ++ quote str ++ ")"
-  FuncCall fn es (Just var)        -> oneLine $ name var ++ " = " ++ name fn ++ "(" ++ commaSeperateVars es ++ ")"
-  FuncCall fn es Nothing -> oneLine $ name fn ++ "(" ++ commaSeperateVars es ++ ")"
+  FuncCall fn es (Just var)        -> oneLine $ getName var ++ " = " ++ getName fn ++ "(" ++ commaSeperateVars es ++ ")"
+  FuncCall fn es Nothing -> oneLine $ getName fn ++ "(" ++ commaSeperateVars es ++ ")"
   IfStmt e sts sts'         -> do
-    oneLine $ "if (" ++ name e ++ ") {"
+    oneLine $ "if (" ++ getName e ++ ") {"
     traverse_ convertOneStmt2 sts
     oneLine "} else {"
     traverse_ convertOneStmt2 sts'
     oneLine "}"
   WhileStmt e sts           -> do
-    oneLine $ "while (" ++ name e ++ ") {"
+    oneLine $ "while (" ++ getName e ++ ") {"
     traverse_ convertOneStmt2 sts
     oneLine "}"
-  ReturnStmt e              -> oneLine $ "return " ++ name e
+  ReturnStmt e              -> oneLine $ "return " ++ getName e
 
 generateFunction :: Function2 -> Writer [String] ()
 generateFunction (Function2 func_name params code _) = do
-  oneLine $ "function " ++ name func_name ++ "(" ++ commaSeperateVars params ++ ") {"
+  oneLine $ "function " ++ getName func_name ++ "(" ++ commaSeperateVars params ++ ") {"
   traverse_ convertOneStmt2 code
   oneLine "}"
   oneLine ""
@@ -70,7 +70,7 @@ generateCode (Program2 funcs consts code) = do
     (Consts named _) = consts
 
   Map.traverseWithKey (\const_name (ConstValueStr s) ->
-    oneLine $ "const " ++ name const_name ++ " = " ++ quote s) named
+    oneLine $ "const " ++ getName const_name ++ " = " ++ quote s) named
 
   oneLine ""
 

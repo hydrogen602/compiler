@@ -12,10 +12,10 @@ newtype LocalVariable = LocalVariable {getLocalVariable :: String} deriving (Sho
 newtype FunctionName = FunctionName {getFunctionName :: String} deriving (Show, Eq, Ord)
 
 instance Nameable LocalVariable where
-  name = getLocalVariable
+  getName = getLocalVariable
 
 instance Nameable FunctionName where
-  name = getFunctionName
+  getName = getFunctionName
 
 
 -- Consts

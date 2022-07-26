@@ -12,7 +12,7 @@ import qualified Util.Types
 
 newtype Label = Label { getLabel :: String } deriving (Show, Eq, Ord)
 instance Classes.Nameable Label where
-  name = getLabel
+  getName = getLabel
 
 data UnlimitedRegister =
     UnlimitedRegister { getNum :: Natural }
@@ -21,8 +21,8 @@ data UnlimitedRegister =
   deriving (Show, Eq, Ord)
 
 instance Nameable UnlimitedRegister where
-  name (UnlimitedRegister n)  = "U" ++ show n
-  name OneTypeSpecialRegister = "UExtra"
+  getName (UnlimitedRegister n)  = "U" ++ show n
+  getName OneTypeSpecialRegister = "UExtra"
 
 newtype ASMLiteral = ASMLiteral { getLiteral :: Int } deriving (Show, Eq, Ord)
 

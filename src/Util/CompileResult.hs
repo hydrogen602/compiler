@@ -37,6 +37,7 @@ data ErrorType =
     UnknownVariableError
   | UnknownFunctionError
   | DuplicateNameError
+  | DuplicateTypeError
   | ArgumentError
   | UnexpectedError
   -- ^ for crashes that are due to internal issues with the compiler

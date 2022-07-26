@@ -35,6 +35,7 @@ import           Util.Types                 (Expr (..), Function (..),
 
 import           Extras.Conversion          (Into (into))
 import           IRGen.Types
+import           Types.Core
 
 
 generate :: Program -> T.Text
@@ -162,7 +163,7 @@ generateStmt = \case
 
 generateFuncs :: Function -> LLVM Operand
 generateFuncs (Function func_name params code literals) = mdo
-  let param_names = map (toShortByteString . name) params
+  let param_names = map (toShortByteString . getName) params
 
   f <- Module.function (toLLVMName func_name) (map ((Types.i32,) . Module.ParameterName) param_names) Types.i32 $ \param_ops -> do
     let params_pairs = zip params param_ops
@@ -180,7 +181,7 @@ generateFuncs (Function func_name params code literals) = mdo
 
 
 toLLVMName :: Nameable a => a -> Name
-toLLVMName = mkName . name
+toLLVMName = mkName . getName
 
 checkForExit :: CodeGen () -> CodeGen ()
 checkForExit m = do

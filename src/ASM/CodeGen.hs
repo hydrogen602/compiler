@@ -6,7 +6,7 @@ import qualified Data.Map.Strict                   as Map
 import           ASM.Types
 import           CodeGen.Classes                   (CodeGeneratable (..))
 import           Data.Foldable                     (traverse_)
-import           Util.Classes                      (Nameable (name))
+import           Util.Classes                      (Nameable (..))
 import           Util.Literals                     (ConstValue (..))
 
 oneLine = tell . (:[])
@@ -14,7 +14,7 @@ oneLineIndent = tell . (:[]) . ("    "++)
 
 generateFunc :: ASMFunc -> Writer [String] ()
 generateFunc (ASMFunc label lines params maybe_out_reg) = do
-  oneLine $ name label ++ ":"
+  oneLine $ getName label ++ ":"
   oneLineIndent "addi        $sp, $sp, -4"
   oneLineIndent "sw          $ra, 0($sp)"
   oneLine ""
@@ -42,7 +42,7 @@ generateCode (ASMProgram (ASMData named unnamed) funcs) = do
 
   Map.traverseWithKey (
     --str_1:  .asciiz     ") = "
-    \val label -> tell [name label ++ ": .asciiz " ++ toRepr val]
+    \val label -> tell [getName label ++ ": .asciiz " ++ toRepr val]
     ) unnamed
 
 
