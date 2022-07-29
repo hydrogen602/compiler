@@ -3,41 +3,42 @@ import           Data.Either   (partitionEithers)
 import qualified Data.Map      as Map
 import           Data.Tree     (Tree)
 
+import           Types.Addon   (Typed)
 import           Util.Literals
 import           Util.Types
 
-data AST = AST {
-  consts :: [Constant],
-  code   :: [Stmt]
+data AST f = AST {
+  consts :: [Constant f],
+  code   :: [Stmt f]
   } deriving (Show, Eq, Ord)
 
-data ASTFunction = ASTFunction {
+data ASTFunction f = ASTFunction {
   name     :: FunctionName,
-  params   :: [LocalVariable] ,
-  funcCode :: [Stmt]
-  } deriving (Show, Eq, Ord)
+  params   :: [Typed LocalVariable] ,
+  funcCode :: [Stmt f]
+  } --deriving (Show, Eq, Ord)
 
-type Constant = Either (ConstName, ConstValue) ASTFunction
+type Constant f = Either (ConstName, ConstValue) (ASTFunction f)
 
 -- Parse Helpers
 
-startHelper :: Constant -> AST -> AST
+startHelper :: Constant f -> AST f -> AST f
 startHelper c ast@AST{consts=cs} =
   ast{consts=c:cs}
 
-fromStmts :: [Stmt] -> AST
+fromStmts :: [Stmt f] -> AST f
 fromStmts = AST []
 
 -- Other
 
-getLiteralsFromStmts :: [Stmt] -> Literals2
+getLiteralsFromStmts :: [Stmt f] -> Literals2
 getLiteralsFromStmts = foldMap $ foldStmtMap getConstFromStmt
 
-getConstFromStmt :: Stmt -> Literals2
+getConstFromStmt :: Stmt f -> Literals2
 getConstFromStmt (PrintLiteralStmt _ s) = singletonLiteral2 $ ConstValueStr s
 getConstFromStmt _                      = mempty
 
-astFunctionToFunction :: ASTFunction -> Function
+astFunctionToFunction :: ASTFunction f -> Function
 astFunctionToFunction (ASTFunction name params code) = Function name params code literals
   where
     literals = getLiteralsFromStmts code

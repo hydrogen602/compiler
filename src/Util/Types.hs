@@ -1,10 +1,17 @@
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 module Util.Types where
 
-import qualified Data.Map.Strict as Map
-import           Data.Maybe      (fromMaybe, listToMaybe)
-import qualified Data.Set        as Set
+import qualified Data.Map.Strict        as Map
+import           Data.Maybe             (fromMaybe, listToMaybe)
+import qualified Data.Set               as Set
 
-import           Util.Classes    (Empty (empty), Nameable (..))
+import           Control.Monad.Identity (Identity)
+import           Extras.PrettyShow      (PrettyShow (..))
+import           Types.Addon            (Typed)
+import           Util.Classes           (Empty (empty), Nameable (..))
 import           Util.Literals
 
 
@@ -17,34 +24,39 @@ instance Nameable LocalVariable where
 instance Nameable FunctionName where
   getName = getFunctionName
 
+instance PrettyShow FunctionName where
+  pshow = getFunctionName
+
 
 -- Consts
 
-data Function = Function {
+data Function f = Function {
   functionName :: FunctionName,
-  params       :: [LocalVariable],
-  functionCode :: [Stmt],
+  params       :: [Typed LocalVariable],
+  functionCode :: [Stmt f],
   literals     :: Literals2
-} deriving (Show, Eq, Ord)
+} --deriving (Show, Eq, Ord)
 
 
 -- Code
 
 data UseNewLine = UseNewLine | NoUseNewLine deriving (Show, Eq, Ord)
 
-data Stmt =
-    LetStmt LocalVariable Expr
-  | AssignStmt LocalVariable Expr
-  | PrintStmt UseNewLine Expr
+data Stmt f =
+    LetStmt (f LocalVariable) (f Expr)
+  | AssignStmt (f LocalVariable) (f Expr)
+  | PrintStmt UseNewLine (f Expr)
   | PrintLiteralStmt UseNewLine String
-  | FuncCall FunctionName [Expr]
-  | IfStmt Expr [Stmt] [Stmt]
-  | WhileStmt Expr [Stmt]
-  | ReturnStmt Expr
-  deriving (Show, Eq, Ord)
+  | FuncCall FunctionName [f Expr]
+  | IfStmt (f Expr) [Stmt f] [Stmt f]
+  | WhileStmt (f Expr) [Stmt f]
+  | ReturnStmt (f Expr)
+  -- deriving (Eq, Ord)
+
+deriving instance (Show (f LocalVariable), Show (f Expr)) => Show (Stmt f)
 
 -- lets do preorder?
-foldStmtr :: (Stmt -> a -> a) -> a -> Stmt -> a
+foldStmtr :: (Stmt f -> a -> a) -> a -> Stmt f -> a
 foldStmtr f init stmt = aFinal
   where
     a = f stmt init
@@ -55,7 +67,7 @@ foldStmtr f init stmt = aFinal
       WhileStmt _ stmts      -> foldr f a stmts
       _                      -> a
 
-foldStmtMap :: Monoid a => (Stmt -> a) -> Stmt -> a
+foldStmtMap :: Monoid a => (Stmt f -> a) -> Stmt f -> a
 foldStmtMap f = foldStmtr (flip (<>) . f) mempty
 
 
@@ -72,13 +84,13 @@ foldStmtMap f = foldStmtr (flip (<>) . f) mempty
 -- newScope = Scope mempty mempty
 
 
-data Program = Program {
-  functions :: Map.Map FunctionName Function,
+data Program f = Program {
+  functions :: Map.Map FunctionName (Function f),
   constants :: Consts,
-  code      :: [Stmt]
-} deriving (Show, Eq, Ord)
+  code      :: [Stmt f]
+} --deriving (Show, Eq, Ord)
 
-newProgram :: Program
+newProgram :: Program f
 newProgram = Program mempty empty mempty
 
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -17,6 +18,8 @@ import           Data.Functor               ((<&>))
 import           Control.Monad.Trans.Except
 import           Data.Bifunctor             (Bifunctor (first, second))
 
+import           Control.Monad.Error.Class  (MonadError)
+import qualified Control.Monad.Error.Class  as MError
 import           Util.Util                  (ddot, (<.>))
 
 data ResultFailed = ResultFailed {
@@ -36,6 +39,7 @@ type Result = ResultT Identity
 data ErrorType =
     UnknownVariableError
   | UnknownFunctionError
+  | UnknownTypeError
   | DuplicateNameError
   | DuplicateTypeError
   | ArgumentError
@@ -46,17 +50,11 @@ data ErrorType =
   | TypeError
   deriving (Show, Eq, Ord)
 
-throwError :: Monad m => ErrorType -> String -> ResultT m a
-throwError = throwE `ddot` ResultFailed
+throwError :: MonadError ResultFailed m => ErrorType -> String -> m a
+throwError = MError.throwError `ddot` ResultFailed
 
-throwArgumentError ::  Monad m => String -> ResultT m a
-throwArgumentError = throwE . ResultFailed ArgumentError
-
-throwUnexpectedError ::  Monad m => String -> ResultT m a
-throwUnexpectedError = throwE . ResultFailed UnexpectedError
-
-catchAll :: Applicative m => ResultT m a -> ResultT m (Maybe a)
-catchAll re = undefined -- catchE
+-- catchAll :: Applicative m => ResultT m a -> ResultT m (Maybe a)
+-- catchAll re = undefined -- catchE
 
 catch :: Monad m => ErrorType -> ResultT m a -> ResultT m (Maybe a)
 catch err re = ExceptT $ runExceptT re <&> \case

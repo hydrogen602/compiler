@@ -20,6 +20,7 @@ data Token =
     Return      |
     Print Bool  |
     Const       |
+    RightArrow  |
     Sym Char    |
     Var String  |
     Integer Int |

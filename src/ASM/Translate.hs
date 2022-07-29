@@ -35,7 +35,7 @@ translateFunc ::
   -> Map.Map Util.Types.FunctionName Label
   -> ResultT (State (ASMVariableTrackerUnlimited, ASMLabelTracker)) ASMFunc
 translateFunc (Flattened.Function2 func_name params code _) asmData funcNameMapping = do
-  func_label <- fromMaybe (throwUnexpectedError $ "Could not find own function name in " ++ getName func_name) $ Map.lookup func_name funcNameMapping
+  func_label <- fromMaybe (throwError UnexpectedError $ "Could not find own function name in " ++ getName func_name) $ Map.lookup func_name funcNameMapping
   let result = OneTypeSpecialRegister
 
   (lines, param_regs) <- mapInnerMonad withTrackerScope $ do
@@ -109,7 +109,7 @@ translateCode code asmData funcNameMapping returnReg = lines
       let lit = Literals.toLiteral strLiteral
 
       label <- fromMaybe
-        (throwUnexpectedError $ "String literal not found in Map of literals: " ++ show lit)
+        (throwError UnexpectedError $ "String literal not found in Map of literals: " ++ show lit)
         $ Map.lookup lit $ getUnnamedData asmData
 
       pure [

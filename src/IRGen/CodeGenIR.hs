@@ -12,7 +12,8 @@ import           Data.String.Transform      (toShortByteString)
 import           Data.Text.Lazy             (Text)
 import qualified Data.Text.Lazy             as T
 import qualified Data.Text.Lazy.IO          as TIO
-import           LLVM.AST                   hiding (Function, Instruction)
+import           LLVM.AST                   hiding (Function, FunctionType,
+                                             Instruction)
 import qualified LLVM.AST                   as L
 import           LLVM.AST.Constant          (Constant (GlobalReference))
 import qualified LLVM.AST.Constant          as C
@@ -33,9 +34,12 @@ import           Util.Types                 (Expr (..), Function (..),
                                              Program (..), Stmt (..),
                                              UseNewLine (NoUseNewLine, UseNewLine))
 
+import           Control.Monad.Trans.Except (runExceptT)
 import           Extras.Conversion          (Into (into))
 import           IRGen.Types
+import           Types.Addon                (TypedOperand (TypedOperand))
 import           Types.Core
+import           Util.CompileResult         (fromSuccess)
 
 
 generate :: Program -> T.Text
@@ -46,18 +50,20 @@ generateLib :: LLVM ()
 generateLib = do
   let
     lib = [
-      ("print___i32", [Types.i32], Types.i32),
-      ("println___i32", [Types.i32], Types.i32)
+      (FunctionType ["i32"] "i32", "print___i32"),
+      (FunctionType ["i32"] "i32", "println___i32")
       ]
 
-  traverse_ (\(name, args, out) -> do
-    f <- Module.extern (mkName name) args out
-    addFunction (FunctionName name) f
+  traverse_ (\(ftype@(FunctionType args out), f_name) -> do
+    args_t <- traverse lookupType args
+    out_t <- lookupType out
+    f <- Module.extern (mkName f_name) args_t out_t
+    addFunction (FunctionName f_name) (TypedOperand ftype f)
     ) lib
 
 
 generateModule :: Program -> Module
-generateModule (Program func_mapping consts code) = evalState m empty
+generateModule (Program func_mapping consts code) = evalState (fromSuccess m) empty
   where
     funcs = mapM_ (withNewScope . generateFuncs) func_mapping
 
@@ -73,7 +79,7 @@ generateModule (Program func_mapping consts code) = evalState m empty
     m = Module.buildModuleT "main" code_state
 
 
-generateExpr :: Expr -> CodeGen Operand
+generateExpr :: Expr -> CodeGen TypedOperand
 generateExpr (Variabl name)         = gets locals >>= flip I.load 0 . (Scope.! name)
 generateExpr (Immediate n)          = pure $ ConstantOperand $ C.Int 32 (fromIntegral n)
 generateExpr (Expr op e1 e2)        = do
@@ -92,7 +98,7 @@ generateExpr (FuncExpr f_name params) = do
   I.call f $ map (,[]) params_ops
 
 
-makeNewVar :: LocalVariable -> CodeGen Operand
+makeNewVar :: LocalVariable -> CodeGen TypedOperand
 makeNewVar lv = do
   let
     var = LocalReference Types.i32 $ toLLVMName lv
@@ -161,7 +167,7 @@ generateStmt = \case
   ReturnStmt ex          -> generateExpr ex >>= I.ret
 
 
-generateFuncs :: Function -> LLVM Operand
+generateFuncs :: Function -> LLVM TypedOperand
 generateFuncs (Function func_name params code literals) = mdo
   let param_names = map (toShortByteString . getName) params
 

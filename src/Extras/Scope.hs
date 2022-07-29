@@ -1,12 +1,16 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Extras.Scope where
 
-import qualified Data.Map.Strict    as Map
-import           Prelude            hiding (fromMaybe)
+import qualified Data.Map.Strict           as Map
+import           Prelude                   hiding (fromMaybe)
 
-import           Extras.Misc        (firstJust)
-import           Util.Classes       (Empty (..))
-import           Util.CompileResult (ErrorType (DuplicateNameError, UnknownVariableError),
-                                     ResultT, fromMaybe, throwError)
+import           Control.Monad.Error.Class (MonadError)
+import           Extras.Misc               (firstJust)
+import           Util.Classes              (Empty (..))
+import           Util.CompileResult        (ErrorType (DuplicateNameError, UnknownVariableError),
+                                            ResultFailed, ResultT, fromMaybe,
+                                            throwError)
 
 data Scope k v = Scope {
   values       :: Map.Map k v,
@@ -32,7 +36,7 @@ popScope = parent_scope
 
 -- with ExceptT error handling system
 
-insertUnique :: (Show k, Ord k, Monad m) => k -> v -> Scope k v -> ResultT m (Scope k v)
+insertUnique :: (Show k, Ord k, MonadError ResultFailed m) => k -> v -> Scope k v -> m (Scope k v)
 insertUnique k v scope
   | k `Map.member` values scope = throwError DuplicateNameError $ show k
   | otherwise = pure $ scope{values=Map.insert k v (values scope)}

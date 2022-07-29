@@ -38,6 +38,8 @@ tokens :-
   \}                    { \s -> RCurly }
   \=                    { \s -> Equals }
   \,                    { \s -> Comma }
+  \:                    { \s -> Colon }
+  \-\>                  { \s -> RightArrow }
   [\+\-\*\/\<\>]        { \s -> Sym (head s) }
   $alpha [$alpha $digit \_]*		{ \s -> Var s }
 

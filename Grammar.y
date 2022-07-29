@@ -28,6 +28,7 @@ import qualified Data.Map.Strict as Map
       print           { Print False }
       str             { Str $$ }
       return          { Return }
+      right_arrow     { RightArrow }
 
       '\n'            { NewLine }
       ')'             { RParens }
@@ -42,6 +43,7 @@ import qualified Data.Map.Strict as Map
       '-'             { Sym '-' }
       '+'             { Sym '+' }
       '<'             { Sym '<' }
+      ':'             { Colon }
 
 %right in
 %nonassoc '>' '<'
@@ -61,10 +63,10 @@ CStmt   : const var '=' str                            { Left (ConstName ($2), C
 Return  : return Expr '\n'                          { [ReturnStmt ($2)] }
         | {- Empty -}                              { [] }
 
-Params  : var Params2                              { (LocalVariable $1):($2) }
+Params  : var ':' var Params2                      { (LocalVariable $1 $3):($4) }
         | {- Empty -}                              { [] }
 
-Params2 : ',' var Params2                          { (LocalVariable $2):($3) }
+Params2 : ',' var ':' var Params2                  { (LocalVariable $2 $4):($5) }
         | {- Empty -}                              { [] }
 
 -- Typed   : var ':' var                              { TypedParam ($1) ($3) }
