@@ -32,7 +32,8 @@ instance PrettyShow FunctionName where
 
 data Function f = Function {
   functionName :: FunctionName,
-  params       :: [Typed LocalVariable],
+  params       :: [f LocalVariable],
+  return_      :: f (),
   functionCode :: [Stmt f],
   literals     :: Literals2
 } --deriving (Show, Eq, Ord)
@@ -43,17 +44,17 @@ data Function f = Function {
 data UseNewLine = UseNewLine | NoUseNewLine deriving (Show, Eq, Ord)
 
 data Stmt f =
-    LetStmt (f LocalVariable) (f Expr)
-  | AssignStmt (f LocalVariable) (f Expr)
-  | PrintStmt UseNewLine (f Expr)
+    LetStmt LocalVariable (f (Expr f))
+  | AssignStmt LocalVariable (f (Expr f))
+  | PrintStmt UseNewLine (f (Expr f))
   | PrintLiteralStmt UseNewLine String
-  | FuncCall FunctionName [f Expr]
-  | IfStmt (f Expr) [Stmt f] [Stmt f]
-  | WhileStmt (f Expr) [Stmt f]
-  | ReturnStmt (f Expr)
+  | FuncCall FunctionName [f (Expr f)]
+  | IfStmt (f (Expr f)) [Stmt f] [Stmt f]
+  | WhileStmt (f (Expr f)) [Stmt f]
+  | ReturnStmt (f (Expr f))
   -- deriving (Eq, Ord)
 
-deriving instance (Show (f LocalVariable), Show (f Expr)) => Show (Stmt f)
+deriving instance (Show (f LocalVariable), Show (f (Expr f))) => Show (Stmt f)
 
 -- lets do preorder?
 foldStmtr :: (Stmt f -> a -> a) -> a -> Stmt f -> a
@@ -94,12 +95,12 @@ newProgram :: Program f
 newProgram = Program mempty empty mempty
 
 
-data Expr =
+data Expr f =
   Variabl LocalVariable |
   Immediate Int |
-  Expr Op Expr Expr |
-  FuncExpr FunctionName [Expr]
-  deriving (Show, Eq, Ord)
+  Expr Op (f (Expr f)) (f (Expr f)) |
+  FuncExpr FunctionName [f (Expr f)]
+  -- deriving (Show, Eq, Ord)
 
 data Op =
     ADD

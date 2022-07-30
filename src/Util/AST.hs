@@ -10,11 +10,12 @@ import           Util.Types
 data AST f = AST {
   consts :: [Constant f],
   code   :: [Stmt f]
-  } deriving (Show, Eq, Ord)
+  } --deriving (Show, Eq, Ord)
 
 data ASTFunction f = ASTFunction {
   name     :: FunctionName,
-  params   :: [Typed LocalVariable] ,
+  params   :: [f LocalVariable],
+  ret      :: f (),
   funcCode :: [Stmt f]
   } --deriving (Show, Eq, Ord)
 
@@ -38,12 +39,12 @@ getConstFromStmt :: Stmt f -> Literals2
 getConstFromStmt (PrintLiteralStmt _ s) = singletonLiteral2 $ ConstValueStr s
 getConstFromStmt _                      = mempty
 
-astFunctionToFunction :: ASTFunction f -> Function
-astFunctionToFunction (ASTFunction name params code) = Function name params code literals
+astFunctionToFunction :: ASTFunction f -> Function f
+astFunctionToFunction (ASTFunction name params ret code) = Function name params ret code literals
   where
     literals = getLiteralsFromStmts code
 
-astToProgram :: AST -> Program
+astToProgram :: AST f -> Program f
 astToProgram (AST consts code) = Program functionMapping consts' code
   where
     (constAssign, ast_funcs) = partitionEithers consts

@@ -2,13 +2,18 @@
 module Grammar (parser, Stmt(..), Expr(..)) where
 
 import Data.Char
+import qualified Data.Map.Strict as Map
+import Debug.Trace
+
 import Lexer
 import Token
-import Debug.Trace
 import Util.AST
 import Util.Types
 import Util.Literals
-import qualified Data.Map.Strict as Map
+import Types.Addon
+import Types.Core
+
+
 }
 
 %name calc
@@ -43,7 +48,6 @@ import qualified Data.Map.Strict as Map
       '-'             { Sym '-' }
       '+'             { Sym '+' }
       '<'             { Sym '<' }
-      ':'             { Colon }
 
 %right in
 %nonassoc '>' '<'
@@ -57,25 +61,29 @@ Start   : '\n' Start                               { $2 }
         | CStmt '\n' Start                         { startHelper ($1) ($3) }
         | Block Return                             { fromStmts ($1 ++ $2) }
 
-CStmt   : const var '=' str                            { Left (ConstName ($2), ConstValueStr ($4)) }
-        | def var '(' Params ')' '{' Block Return '}'  { Right (ASTFunction (FunctionName ($2)) ($4) (($7)++($8))) }
+CStmt   : const var '=' str                        { Left (ConstName ($2), ConstValueStr ($4)) }
+        | Func                                     { Right $0 }
 
-Return  : return Expr '\n'                          { [ReturnStmt ($2)] }
+Func    : def var '(' MParams ')' right_arrow var '{' Block Return '}'  { ASTFunction (FunctionName ($2)) ($4) (typeHelper $7 ()) (($9)++($10)) }
+
+Return  : return Expr '\n'                         { [ReturnStmt ($2)] }
         | {- Empty -}                              { [] }
 
-Params  : var ':' var Params2                      { (LocalVariable $1 $3):($4) }
+MParams : Params                                   { $1 }
         | {- Empty -}                              { [] }
 
-Params2 : ',' var ':' var Params2                  { (LocalVariable $2 $4):($5) }
+Params  : var ':' var Params2                      { (typeHelper $3 (LocalVariable $1)):($4) }
+
+Params2 : ',' Params                               { $2 }
         | {- Empty -}                              { [] }
 
 -- Typed   : var ':' var                              { TypedParam ($1) ($3) }
 
-Args    :: { [Expr] }
+Args    :: { [Expr Typed] }
         : Expr Args2                               { ($1):($2) }
         | {- Empty -}                              { [] }
 
-Args2   :: { [Expr] }
+Args2   :: { [Expr Typed] }
         : ',' Expr Args2                           { ($2):($3) }
         | {- Empty -}                              { [] }
 
@@ -106,9 +114,12 @@ Value   : var                                      { Variabl (LocalVariable $1) 
         | int                                      { Immediate $1 }
 
 {
+typeHelper :: String -> a -> Typed a
+typeHelper s = Typed (TypeName s)
+
 parseError :: [Token] -> a
 parseError tok = error $ "Parse error " ++ show tok
 
-parser :: String -> AST
+parser :: String -> AST Typed
 parser = calc . lexThis
 }

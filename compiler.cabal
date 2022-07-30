@@ -40,7 +40,11 @@ library
         Extras.Conversion
         Extras.Misc
         Extras.Scope
+        Extras.PrettyShow
         IRGen.Types
+        IRGen.MixedFunctions
+        Types.Addon
+        Types.Core
     exposed-modules:
         Token
         Grammar

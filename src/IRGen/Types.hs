@@ -12,12 +12,14 @@ import qualified LLVM.IRBuilder             as Module
 
 import           Data.Foldable              (traverse_)
 import           Extras.PrettyShow          (PrettyShow (pshow))
+import           Extras.Scope               (Scope (Scope))
 import qualified Extras.Scope               as Scope
-import           Types.Addon                (TypedOperand (TypedOperand))
-import           Types.Core                 (Typed, getContainedTypes)
+import           LLVM.AST                   (Operand)
+import           Types.Addon                (Typed (..))
+import           Types.Core                 (AType, getContainedTypes)
 import qualified Types.Core                 as TC
 import           Util.Classes               (Empty (empty), Nameable (..))
-import           Util.CompileResult         (ErrorType (DuplicateNameError, DuplicateTypeError),
+import           Util.CompileResult         (ErrorType (DuplicateNameError, DuplicateTypeError, UnknownFunctionError),
                                              ResultFailed, ResultT, fromSuccess,
                                              throwError)
 import           Util.Literals              (ConstValue)
@@ -25,9 +27,9 @@ import           Util.Types                 (FunctionName, LocalVariable)
 
 
 data ProgramEnv = ProgramEnv {
-  funcs  :: Map.Map FunctionName TypedOperand,
-  consts :: Map.Map ConstValue TypedOperand,
-  locals :: Scope.Scope LocalVariable TypedOperand,
+  funcs  :: Map.Map FunctionName (Typed Operand),
+  consts :: Map.Map ConstValue (Typed Operand),
+  locals :: Scope.Scope LocalVariable (Typed Operand),
   types  :: TC.TypeTracker
 }
 
@@ -43,14 +45,28 @@ instance Empty ProgramEnv where
   empty = ProgramEnv mempty mempty empty mempty
 
 
-lookupType :: (MonadState ProgramEnv m, MonadError ResultFailed m) => Typed -> m L.Type
+lookupType :: (MonadState ProgramEnv m, MonadError ResultFailed m) => AType -> m L.Type
 lookupType name = do
   ty <- gets types
   TC.get name ty
 
 
-addFunction :: (MonadState ProgramEnv m, MonadError ResultFailed m) => FunctionName -> TypedOperand -> m ()
-addFunction func_name typed@(TypedOperand type_ _) = do
+lookupVariable :: (MonadState ProgramEnv m, MonadError ResultFailed m) => LocalVariable -> m (Typed Operand)
+lookupVariable name = do
+  scope <- gets locals
+  scope Scope.!! name
+
+
+lookupFunction :: (MonadState ProgramEnv m, MonadError ResultFailed m) => FunctionName -> m (Typed Operand)
+lookupFunction name = do
+  funcMapping <- gets funcs
+  case Map.lookup name funcMapping of
+    Nothing -> throwError UnknownFunctionError $ pshow name
+    Just ty -> pure ty
+
+
+addFunction :: (MonadState ProgramEnv m, MonadError ResultFailed m) => FunctionName -> Typed Operand -> m ()
+addFunction func_name typed@(Typed type_ _) = do
   type_tracker <- gets types
   let all_types_in_func = getContainedTypes type_
   traverse_ (`TC.requireType` type_tracker) all_types_in_func
@@ -62,7 +78,7 @@ addFunction func_name typed@(TypedOperand type_ _) = do
     put $ program{funcs=Map.insert func_name typed (funcs program)}
 
 
-addVariable :: (MonadState ProgramEnv m, MonadError ResultFailed m) => LocalVariable -> TypedOperand -> m ()
+addVariable :: (MonadState ProgramEnv m, MonadError ResultFailed m) => LocalVariable -> Typed Operand -> m ()
 addVariable var_name op = do
   program <- get
   new_locals <- Scope.insertUnique var_name op (locals program)

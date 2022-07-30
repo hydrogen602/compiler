@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections     #-}
 
 module Types.Core where
 
@@ -14,10 +13,10 @@ import           Control.Monad.Identity    (Identity (runIdentity))
 import           Data.List                 (intercalate)
 import           Extras.PrettyShow
 import           Util.Classes              (Nameable (..))
-import           Util.CompileResult        (ErrorType (DuplicateTypeError, UnknownTypeError),
+import           Util.CompileResult        (ErrorType (DuplicateTypeError, TypeError, UnknownTypeError),
                                             ResultFailed, ResultT, fromSuccess,
                                             throwError)
-import           Util.Util                 (dddot, ddot)
+import           Util.Util                 (dddot, ddot, quote)
 
 
 data AType =
@@ -27,6 +26,10 @@ data AType =
     returnType :: AType
   }
   deriving (Show, Eq, Ord) -- ToDo: Turn FunctionType into Kinds
+
+throwTypeError :: MonadError ResultFailed m => AType -> AType -> m a
+throwTypeError expected actual = throwError TypeError $
+  "Expected " ++ quote (pshow expected) ++ " but got " ++ quote (pshow actual)
 
 instance PrettyShow AType where
   pshow (TypeName n) = n
@@ -95,15 +98,23 @@ get name tracker = maybe
 
 -- ToDo: Kinds - Pointers are * -> * as there can be a pointer of anything
 
+unit = TypeName "()"
+i32 = TypeName "i32"
+i64 = TypeName "i64"
+bool = TypeName "bool"
+i32Ptr = TypeName "*i32"
+i64Ptr = TypeName "*i64"
+boolPtr = TypeName "*bool"
+
 builtinTypes :: TypeTracker
 builtinTypes = fromList [
-  ("()", T.void),
-  ("i32", T.i32),
-  ("i64", T.i64),
-  ("bool", T.i1),
-  ("*i32", T.ptr T.i32),
-  ("*i64", T.ptr T.i64),
-  ("*bool", T.ptr T.i1)
+  (unit, T.void),
+  (i32, T.i32),
+  (i64, T.i64),
+  (bool, T.i1),
+  (i32Ptr, T.ptr T.i32),
+  (i64Ptr, T.ptr T.i64),
+  (boolPtr, T.ptr T.i1)
   ]
 
 

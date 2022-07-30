@@ -22,7 +22,8 @@ import qualified LLVM.AST.Type              as Types
 import qualified LLVM.IRBuilder             as Module
 import qualified LLVM.IRBuilder.Instruction as I
 import qualified LLVM.IRBuilder.Monad       as M
-import           LLVM.Prelude               (ShortByteString, traverse_)
+import           LLVM.Prelude               (ShortByteString, sequenceA_,
+                                             traverse_)
 import           LLVM.Pretty                (ppllvm)
 
 import qualified Extras.Scope               as Scope
@@ -36,13 +37,16 @@ import           Util.Types                 (Expr (..), Function (..),
 
 import           Control.Monad.Trans.Except (runExceptT)
 import           Extras.Conversion          (Into (into))
+import           Extras.Misc                (Annotated (getValue))
+import           IRGen.MixedFunctions       (addition, lessThan)
 import           IRGen.Types
-import           Types.Addon                (TypedOperand (TypedOperand))
-import           Types.Core
+import           Types.Addon                (Typed (..), isType, typeCheck,
+                                             typeCheck', typeCheckFunction)
+import qualified Types.Core                 as Ty
 import           Util.CompileResult         (fromSuccess)
 
 
-generate :: Program -> T.Text
+generate :: Program Typed -> T.Text
 generate = ppllvm . generateModule
 
 
@@ -50,19 +54,19 @@ generateLib :: LLVM ()
 generateLib = do
   let
     lib = [
-      (FunctionType ["i32"] "i32", "print___i32"),
-      (FunctionType ["i32"] "i32", "println___i32")
+      (Ty.FunctionType ["i32"] "i32", "print___i32"),
+      (Ty.FunctionType ["i32"] "i32", "println___i32")
       ]
 
-  traverse_ (\(ftype@(FunctionType args out), f_name) -> do
+  traverse_ (\(ftype@(Ty.FunctionType args out), f_name) -> do
     args_t <- traverse lookupType args
     out_t <- lookupType out
     f <- Module.extern (mkName f_name) args_t out_t
-    addFunction (FunctionName f_name) (TypedOperand ftype f)
+    addFunction (FunctionName f_name) (Typed ftype f)
     ) lib
 
 
-generateModule :: Program -> Module
+generateModule :: Program Typed -> Module
 generateModule (Program func_mapping consts code) = evalState (fromSuccess m) empty
   where
     funcs = mapM_ (withNewScope . generateFuncs) func_mapping
@@ -79,67 +83,82 @@ generateModule (Program func_mapping consts code) = evalState (fromSuccess m) em
     m = Module.buildModuleT "main" code_state
 
 
-generateExpr :: Expr -> CodeGen TypedOperand
-generateExpr (Variabl name)         = gets locals >>= flip I.load 0 . (Scope.! name)
-generateExpr (Immediate n)          = pure $ ConstantOperand $ C.Int 32 (fromIntegral n)
-generateExpr (Expr op e1 e2)        = do
-  let
-    f = case op of
-      ADD       -> I.add
-      LESS_THAN -> I.icmp SLT
-  asOperand1 <- generateExpr e1
-  asOperand2 <- generateExpr e2
-  f asOperand1 asOperand2
+generateExpr :: Typed (Expr Typed) -> CodeGen (Typed Operand)
+generateExpr (Typed type_ expr) = typeCheck' type_ $ helper expr
+  where
+    helper :: Expr Typed -> CodeGen (Typed Operand)
+    helper (Variabl name)         = do
+      op <- lookupVariable name
+      sequenceA $ flip I.load 0 <$> op
+    helper (Immediate n)          =
+      pure $ Typed "i32" $ ConstantOperand $ C.Int 32 (fromIntegral n)
+    helper (Expr op e1 e2)        = do
+      let
+        f = case op of
+          ADD       -> addition
+          LESS_THAN -> lessThan
 
-generateExpr (FuncExpr f_name params) = do
-  func_mapping <- gets funcs
-  let f = func_mapping Map.! f_name
-  params_ops <- traverse generateExpr params
-  I.call f $ map (,[]) params_ops
+      asOperand1 <- generateExpr e1
+      asOperand2 <- generateExpr e2
+      f asOperand1 asOperand2
+
+    helper (FuncExpr f_name params) = do
+      func <- lookupFunction f_name
+
+      params_ops <- traverse generateExpr params
+      (Typed ret f) <- typeCheckFunction func params_ops
+      fmap (Typed ret) $ I.call f $ map ((,[]) . getValue) params_ops
 
 
-makeNewVar :: LocalVariable -> CodeGen TypedOperand
-makeNewVar lv = do
+makeNewVar :: Typed LocalVariable -> CodeGen (Typed Operand)
+makeNewVar (Typed ty lv) = do
   let
     var = LocalReference Types.i32 $ toLLVMName lv
-  var <- I.alloca Types.i32 Nothing 0
+  var <- Typed ty <$> I.alloca Types.i32 Nothing 0
   addVariable lv var
   pure var
 
 
-generateStmt :: Stmt -> CodeGen ()
+generateStmt :: Stmt Typed -> CodeGen ()
 generateStmt = \case
   LetStmt lv ex          -> do
-    var <- makeNewVar lv
     val <- generateExpr ex
+    var <- makeNewVar $ Typed (type_ val) lv
     -- see https://llvm.org/docs/LangRef.html#store-instruction
-    I.store var 0 val
+    I.store (getValue var) 0 (getValue val)
   AssignStmt lv ex       -> do
     var <- (Scope.! lv) <$> gets locals
     val <- generateExpr ex
-    I.store var 0 val
+    typeCheck (type_ var) val
+    I.store (getValue var) 0 (getValue val)
   PrintStmt unl ex       -> do
     var <- generateExpr ex
+    typeCheck Ty.i32 var
     func_mapping <- gets funcs
     let
       f_name = case unl of
-        UseNewLine   -> "println___i32"
-        NoUseNewLine -> "print___i32"
-      f = func_mapping Map.! FunctionName f_name
-    I.call f $ map (,[]) [var]
+        UseNewLine   -> FunctionName "println___i32"
+        NoUseNewLine -> FunctionName "print___i32"
+    -- ToDo: remove this in favor of generic functions
+    f <- getValue <$> lookupFunction f_name
+    I.call f $ map (,[]) [getValue var]
     pure ()
   PrintLiteralStmt unl s -> error "Not yet implemented"
-  FuncCall fn exs        -> do
-    vars <- traverse generateExpr exs
-    func_mapping <- gets funcs
-    let f = func_mapping Map.! fn
+  FuncCall f_name exs        -> do
+    func <- lookupFunction f_name
 
-    I.call f $ map (,[]) vars
+    params_ops <- traverse generateExpr exs
+    (Typed ret f) <- typeCheckFunction func params_ops
+    fmap (Typed ret) $ I.call f $ map ((,[]) . getValue) params_ops
     pure ()
   IfStmt ex sts_then sts_else     -> mdo
     cond <- generateExpr ex
-    b <- I.icmp NE cond (ConstantOperand $ C.Int 32 0)
-    Module.condBr b then_block else_block
+    b <- if cond `isType` Ty.bool then
+        pure cond
+      else
+        Typed Ty.bool <$> I.icmp NE (getValue cond) (ConstantOperand $ C.Int 32 0)
+
+    Module.condBr (getValue b) then_block else_block
 
     then_block <- Module.block `Module.named` "then"
     traverse_ generateStmt sts_then
@@ -155,8 +174,12 @@ generateStmt = \case
     Module.br cond_block
     cond_block <- Module.block `Module.named` "while_condition"
     cond <- generateExpr ex
-    b <- I.icmp NE cond (ConstantOperand $ C.Int 32 0)
-    Module.condBr b while_body break_block
+    b <- if cond `isType` Ty.bool then
+        pure cond
+      else
+        Typed Ty.bool <$> I.icmp NE (getValue cond) (ConstantOperand $ C.Int 32 0)
+
+    Module.condBr (getValue b) while_body break_block
 
     while_body <- Module.block `Module.named` "while_body"
     traverse_ generateStmt sts
@@ -164,25 +187,36 @@ generateStmt = \case
 
     break_block <- Module.block `Module.named` "while_break"
     pure ()
-  ReturnStmt ex          -> generateExpr ex >>= I.ret
+  ReturnStmt ex          -> do
+    val <- generateExpr ex
+    sequenceA_ $ I.ret <$> val
 
 
-generateFuncs :: Function -> LLVM TypedOperand
-generateFuncs (Function func_name params code literals) = mdo
-  let param_names = map (toShortByteString . getName) params
+generateFuncs :: Function Typed -> LLVM (Typed Operand)
+generateFuncs (Function func_name params ret code literals) = mdo
+  let
+    param_names = map (toShortByteString . getName . getValue) params
+    param_types = map type_ params
 
-  f <- Module.function (toLLVMName func_name) (map ((Types.i32,) . Module.ParameterName) param_names) Types.i32 $ \param_ops -> do
+  param_llvm_types <- traverse lookupType param_types
+  ret_llvm_type <- lookupType $ type_ ret
+
+  let
+    params_with_types = zip param_llvm_types $ map Module.ParameterName param_names
+
+    add_types = Typed (Ty.FunctionType param_types $ type_ ret)
+
+  f <- fmap add_types $ Module.function (toLLVMName func_name) params_with_types ret_llvm_type $ \param_ops -> do
     let params_pairs = zip params param_ops
     traverse_ (\(name, op) -> do
       -- TODO: copying all args doesn't seem great
       var_op <- makeNewVar name
-      I.store var_op 0 op
+      I.store (getValue var_op) 0 op
       ) params_pairs
 
     forM_ code generateStmt
 
   addFunction func_name f
-
   pure f
 
 

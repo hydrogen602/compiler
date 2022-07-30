@@ -55,3 +55,6 @@ find f ls = case filter f ls of
 (<.>) f fm = fmap f . fm
 
 infixr 9 <.>
+
+quote :: String -> String
+quote s = '"':s ++ "\""

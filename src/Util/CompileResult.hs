@@ -20,6 +20,7 @@ import           Data.Bifunctor             (Bifunctor (first, second))
 
 import           Control.Monad.Error.Class  (MonadError)
 import qualified Control.Monad.Error.Class  as MError
+import           Extras.PrettyShow          (PrettyShow (pshow))
 import           Util.Util                  (ddot, (<.>))
 
 data ResultFailed = ResultFailed {
@@ -52,6 +53,9 @@ data ErrorType =
 
 throwError :: MonadError ResultFailed m => ErrorType -> String -> m a
 throwError = MError.throwError `ddot` ResultFailed
+
+throwShowError :: (MonadError ResultFailed m, PrettyShow b) => ErrorType -> b -> m a
+throwShowError errType = MError.throwError . ResultFailed errType . pshow
 
 -- catchAll :: Applicative m => ResultT m a -> ResultT m (Maybe a)
 -- catchAll re = undefined -- catchE

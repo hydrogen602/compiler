@@ -11,6 +11,7 @@ import           Util.Classes              (Empty (..))
 import           Util.CompileResult        (ErrorType (DuplicateNameError, UnknownVariableError),
                                             ResultFailed, ResultT, fromMaybe,
                                             throwError)
+import           Util.Types                (LocalVariable)
 
 data Scope k v = Scope {
   values       :: Map.Map k v,
@@ -27,6 +28,11 @@ scope ! key = case scope !? key of
 
 (!?) :: Ord k => Scope k v -> k -> Maybe v
 (Scope vals maybe_parent) !? key = firstJust (vals Map.!? key) $ maybe_parent >>= (!? key)
+
+(!!) :: (MonadError ResultFailed m) => Scope LocalVariable v -> LocalVariable -> m v
+scope !! key = case scope !? key of
+  Nothing -> throwError UnknownVariableError "Cannot find key"
+  Just sc -> pure sc
 
 pushScope :: Ord k => Scope k v -> Scope k v
 pushScope sc = empty{parent_scope=Just sc}

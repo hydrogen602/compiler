@@ -23,8 +23,9 @@ main = do
       (Just outFile) -> outFile
       Nothing        -> "out.ll"
 
+    ast :: AST UnresolvedTyped
     ast = parser (s ++ "\n")
-    program = astToProgram ast
+    program = astToProgram $ undefined ast
 
     ir = generate program
 
