@@ -62,7 +62,7 @@ Start   : '\n' Start                               { $2 }
         | Block Return                             { fromStmts ($1 ++ $2) }
 
 CStmt   : const var '=' str                        { Left (ConstName ($2), ConstValueStr ($4)) }
-        | Func                                     { Right $0 }
+        | Func                                     { Right $1 }
 
 Func    : def var '(' MParams ')' right_arrow var '{' Block Return '}'  { ASTFunction (FunctionName ($2)) ($4) (typeHelper $7 ()) (($9)++($10)) }
 
@@ -79,11 +79,11 @@ Params2 : ',' Params                               { $2 }
 
 -- Typed   : var ':' var                              { TypedParam ($1) ($3) }
 
-Args    :: { [Expr Typed] }
+Args    :: { [UnresolvedTyped (Expr UnresolvedTyped)] }
         : Expr Args2                               { ($1):($2) }
         | {- Empty -}                              { [] }
 
-Args2   :: { [Expr Typed] }
+Args2   :: { [UnresolvedTyped (Expr UnresolvedTyped)] }
         : ',' Expr Args2                           { ($2):($3) }
         | {- Empty -}                              { [] }
 
@@ -91,7 +91,8 @@ Args2   :: { [Expr Typed] }
 Block   : Stmt '\n' Block                          { ($1):($3) }
         | {- Empty -}                              { [] }
 
-Stmt    : let var '=' Expr                         { LetStmt (LocalVariable $2) $4 }
+Stmt    :: { Stmt UnresolvedTyped }
+        : let var '=' Expr                         { LetStmt (LocalVariable $2) $4 }
         | var '=' Expr                             { AssignStmt (LocalVariable $1) $3 }
         | println str                              { PrintLiteralStmt UseNewLine $2 }
         | print str                                { PrintLiteralStmt NoUseNewLine $2 }
@@ -104,22 +105,26 @@ Stmt    : let var '=' Expr                         { LetStmt (LocalVariable $2) 
 ElseP   : else '{' Block '}'                       { $3 }
         | {- Empty -}                              { [] }
 
-Expr    : Expr '+' Expr                            { Expr ADD $1 $3 }
-        | Expr '<' Expr                            { Expr LESS_THAN $1 $3 }
-        | Value                                    { $1 }
-        | var '(' Args ')'                         { FuncExpr (FunctionName $1) $3 }
-        | '(' Expr ')'                             { $2 }
+Expr    :: { UnresolvedTyped (Expr UnresolvedTyped) }
+        : Expr '+' Expr                            { noType (Expr ADD $1 $3) }
+        | Expr '<' Expr                            { noType (Expr LESS_THAN $1 $3) }
+        | Value                                    { noType ($1) }
+        | var '(' Args ')'                         { noType (FuncExpr (FunctionName $1) $3) }
+        | '(' Expr ')'                             { ($2) }
 
 Value   : var                                      { Variabl (LocalVariable $1) }
         | int                                      { Immediate $1 }
 
 {
-typeHelper :: String -> a -> Typed a
-typeHelper s = Typed (TypeName s)
+typeHelper :: String -> a -> UnresolvedTyped a
+typeHelper s = UnresolvedTyped (Just $ TypeName s)
+
+noType :: a -> UnresolvedTyped a
+noType = UnresolvedTyped Nothing
 
 parseError :: [Token] -> a
 parseError tok = error $ "Parse error " ++ show tok
 
-parser :: String -> AST Typed
+parser :: String -> AST UnresolvedTyped
 parser = calc . lexThis
 }

@@ -57,6 +57,7 @@ library
         Util.Util
         Util.Flattened
         Util.FlattenedGen
+        Util.Resolver
         CodeGen.Generator
         ASM.Translate
         ASM.Types 
