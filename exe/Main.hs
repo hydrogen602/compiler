@@ -6,7 +6,6 @@ import           System.Environment     (getArgs)
 import           Grammar
 import           IRGen.CodeGenIR        (generate)
 import           Util.AST               (astToProgram)
-import           Util.Resolver          (resolve)
 import           Util.Util
 
 
@@ -24,7 +23,7 @@ main = do
       (Just outFile) -> outFile
       Nothing        -> "out.ll"
 
-    ast = resolve $ parser (s ++ "\n")
+    ast = parser (s ++ "\n")
     program = astToProgram $ undefined ast
 
     ir = generate program

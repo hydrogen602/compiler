@@ -32,8 +32,8 @@ instance PrettyShow FunctionName where
 
 data Function f = Function {
   functionName :: FunctionName,
-  params       :: [f LocalVariable],
-  return_      :: f (),
+  params       :: [Typed LocalVariable],
+  return_      :: Typed (),
   functionCode :: [Stmt f],
   literals     :: Literals2
 } --deriving (Show, Eq, Ord)

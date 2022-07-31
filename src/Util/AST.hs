@@ -14,8 +14,8 @@ data AST f = AST {
 
 data ASTFunction f = ASTFunction {
   name     :: FunctionName,
-  params   :: [f LocalVariable],
-  ret      :: f (),
+  params   :: [Typed LocalVariable],
+  ret      :: Typed (),
   funcCode :: [Stmt f]
   } --deriving (Show, Eq, Ord)
 

@@ -37,16 +37,17 @@ import           Util.Types                 (Expr (..), Function (..),
 
 import           Control.Monad.Trans.Except (runExceptT)
 import           Extras.Conversion          (Into (into))
-import           Extras.Misc                (Annotated (getValue))
+import           Extras.Misc                (FixedAnnotated (getValue))
 import           IRGen.MixedFunctions       (addition, lessThan)
 import           IRGen.Types
-import           Types.Addon                (Typed (..), isType, typeCheck,
+import           Types.Addon                (MaybeTyped (..), Typed (..),
+                                             isType, toMaybeTyped, typeCheck,
                                              typeCheck', typeCheckFunction)
 import qualified Types.Core                 as Ty
 import           Util.CompileResult         (fromSuccess)
 
 
-generate :: Program Typed -> T.Text
+generate :: Program MaybeTyped -> T.Text
 generate = ppllvm . generateModule
 
 
@@ -54,8 +55,8 @@ generateLib :: LLVM ()
 generateLib = do
   let
     lib = [
-      (Ty.FunctionType ["i32"] "i32", "print___i32"),
-      (Ty.FunctionType ["i32"] "i32", "println___i32")
+      (Ty.FunctionType [Ty.i32] Ty.i32, "print___i32"),
+      (Ty.FunctionType [Ty.i32] Ty.i32, "println___i32")
       ]
 
   traverse_ (\(ftype@(Ty.FunctionType args out), f_name) -> do
@@ -66,7 +67,7 @@ generateLib = do
     ) lib
 
 
-generateModule :: Program Typed -> Module
+generateModule :: Program MaybeTyped -> Module
 generateModule (Program func_mapping consts code) = evalState (fromSuccess m) empty
   where
     funcs = mapM_ (withNewScope . generateFuncs) func_mapping
@@ -83,15 +84,15 @@ generateModule (Program func_mapping consts code) = evalState (fromSuccess m) em
     m = Module.buildModuleT "main" code_state
 
 
-generateExpr :: Typed (Expr Typed) -> CodeGen (Typed Operand)
-generateExpr (Typed type_ expr) = typeCheck' type_ $ helper expr
+generateExpr :: MaybeTyped (Expr MaybeTyped) -> CodeGen (Typed Operand)
+generateExpr (MaybeTyped type_ expr) = typeCheck' type_ $ helper expr
   where
-    helper :: Expr Typed -> CodeGen (Typed Operand)
+    helper :: Expr MaybeTyped -> CodeGen (Typed Operand)
     helper (Variabl name)         = do
       op <- lookupVariable name
       sequenceA $ flip I.load 0 <$> op
     helper (Immediate n)          =
-      pure $ Typed "i32" $ ConstantOperand $ C.Int 32 (fromIntegral n)
+      pure $ Typed Ty.i32 $ ConstantOperand $ C.Int 32 (fromIntegral n)
     helper (Expr op e1 e2)        = do
       let
         f = case op of
@@ -119,11 +120,11 @@ makeNewVar (Typed ty lv) = do
   pure var
 
 
-generateStmt :: Stmt Typed -> CodeGen ()
+generateStmt :: Stmt MaybeTyped -> CodeGen ()
 generateStmt = \case
   LetStmt lv ex          -> do
     val <- generateExpr ex
-    var <- makeNewVar $ Typed (type_ val) lv
+    var <- makeNewVar $ lv <$ val
     -- see https://llvm.org/docs/LangRef.html#store-instruction
     I.store (getValue var) 0 (getValue val)
   AssignStmt lv ex       -> do
@@ -192,7 +193,7 @@ generateStmt = \case
     sequenceA_ $ I.ret <$> val
 
 
-generateFuncs :: Function Typed -> LLVM (Typed Operand)
+generateFuncs :: Function MaybeTyped -> LLVM (Typed Operand)
 generateFuncs (Function func_name params ret code literals) = mdo
   let
     param_names = map (toShortByteString . getName . getValue) params
