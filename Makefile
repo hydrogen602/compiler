@@ -17,9 +17,6 @@ EXTRAS = $(shell find libc -type f -name '*.o')
 run: a.out
 	./a.out
 
-lib:
-	$(MAKE) -C libc
-
 out.ll: ${SRCS} ${GENERATED}
 	cabal run exe:compiler -- -i test_basic.idk -o out.ll
 
@@ -31,7 +28,10 @@ a.out: out.o lib
 	ld out.o ${EXTRAS} -lSystem -L$(shell xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib/
 
 
-# haskell building
+# Haskell building & other setup
+
+lib:
+	$(MAKE) -C libc
 
 build: ${SRCS} ${GENERATED}
 	cabal build exe:compiler

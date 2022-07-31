@@ -20,13 +20,13 @@ class FixedAnnotated a b | a -> b where -- b c | a -> b c where
 
   fromPair :: b -> c -> a c
 
-instance {-# OVERLAPS #-} FixedAnnotated a b => Functor a where
+instance {-# OVERLAPPABLE #-} FixedAnnotated a b => Functor a where
   fmap f = uncurry fromPair . second f . toPair
 
-instance {-# OVERLAPS #-} FixedAnnotated a b => Foldable a where
+instance {-# OVERLAPPABLE #-} FixedAnnotated a b => Foldable a where
   foldMap f = f . getValue
 
-instance {-# OVERLAPS #-} (Foldable a, Functor a, FixedAnnotated a b) => Traversable a where
+instance {-# OVERLAPPABLE #-} (Foldable a, Functor a, FixedAnnotated a b) => Traversable a where
   traverse f ta = fromPair annotation <$> value
     where
       (annotation, value) = second f $ toPair ta

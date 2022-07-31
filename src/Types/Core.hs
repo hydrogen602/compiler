@@ -65,8 +65,12 @@ instance Semigroup TypeTracker where
     else
       error $ "Conflicting definiton for types: " ++ pshow (Map.keys $ Map.intersection t1 t1)
 
-instance Monoid TypeTracker where
-  mempty = TypeTracker mempty
+-- no mempty as TypeTracker should have at least the built-in types, and is thus not empty
+-- instance Monoid TypeTracker where
+--   mempty = TypeTracker mempty
+
+newTypeTracker :: TypeTracker
+newTypeTracker = builtinTypes
 
 -- type tracker helpers
 

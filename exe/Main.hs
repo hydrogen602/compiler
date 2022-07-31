@@ -24,7 +24,7 @@ main = do
       Nothing        -> "out.ll"
 
     ast = parser (s ++ "\n")
-    program = astToProgram $ undefined ast
+    program = astToProgram ast
 
     ir = generate program
 

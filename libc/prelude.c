@@ -1,11 +1,5 @@
 #include <stdio.h>
 
-int print___i32(int c) {
-  printf("%d", c);
-  return 0;
-}
+void print___i32(int c) { printf("%d", c); }
 
-int println___i32(int c) {
-  printf("%d\n", c);
-  return 0;
-}
+void println___i32(int c) { printf("%d\n", c); }

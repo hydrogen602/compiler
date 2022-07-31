@@ -55,8 +55,8 @@ generateLib :: LLVM ()
 generateLib = do
   let
     lib = [
-      (Ty.FunctionType [Ty.i32] Ty.i32, "print___i32"),
-      (Ty.FunctionType [Ty.i32] Ty.i32, "println___i32")
+      (Ty.FunctionType [Ty.i32] Ty.unit, "print___i32"),
+      (Ty.FunctionType [Ty.i32] Ty.unit, "println___i32")
       ]
 
   traverse_ (\(ftype@(Ty.FunctionType args out), f_name) -> do
@@ -68,7 +68,7 @@ generateLib = do
 
 
 generateModule :: Program MaybeTyped -> Module
-generateModule (Program func_mapping consts code) = evalState (fromSuccess m) empty
+generateModule (Program func_mapping consts code) = evalState (fromSuccess m) newProgramEnv
   where
     funcs = mapM_ (withNewScope . generateFuncs) func_mapping
 

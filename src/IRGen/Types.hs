@@ -16,7 +16,7 @@ import           Extras.Scope               (Scope (Scope))
 import qualified Extras.Scope               as Scope
 import           LLVM.AST                   (Operand)
 import           Types.Addon                (Typed (..))
-import           Types.Core                 (AType, getContainedTypes)
+import           Types.Core                 (AType)
 import qualified Types.Core                 as TC
 import           Util.Classes               (Empty (empty), Nameable (..))
 import           Util.CompileResult         (ErrorType (DuplicateNameError, DuplicateTypeError, UnknownFunctionError),
@@ -41,8 +41,9 @@ withNewScope actionInScope = do
   modify (\program -> program{locals=this_scope})
   pure a
 
-instance Empty ProgramEnv where
-  empty = ProgramEnv mempty mempty empty mempty
+-- instance Empty ProgramEnv where
+--   empty = ProgramEnv mempty mempty empty mempty
+newProgramEnv = ProgramEnv mempty mempty empty TC.newTypeTracker
 
 
 lookupType :: (MonadState ProgramEnv m, MonadError ResultFailed m) => AType -> m L.Type
@@ -68,7 +69,7 @@ lookupFunction name = do
 addFunction :: (MonadState ProgramEnv m, MonadError ResultFailed m) => FunctionName -> Typed Operand -> m ()
 addFunction func_name typed@(Typed type_ _) = do
   type_tracker <- gets types
-  let all_types_in_func = getContainedTypes type_
+  let all_types_in_func = TC.getContainedTypes type_
   traverse_ (`TC.requireType` type_tracker) all_types_in_func
 
   program <- get

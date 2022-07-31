@@ -1,4 +1,7 @@
 
+def f(x: i32) -> i32 {
+  return x + 3
+}
 
 let c = 20
 
@@ -13,10 +16,12 @@ else {
 let x = 5
 let y = 1
 
+println(f(y))
+
 while 0 < x {
   x = x + (-1)
   print(x)
 }
 
 
-return 4
+return 0
