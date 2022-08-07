@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -22,7 +23,7 @@ import           Util.CompileResult        (ErrorType (TypeError), ResultFailed,
 data MaybeTyped a = MaybeTyped {
   type_'   :: Maybe AType,
   operand' :: a
-} deriving (Show, Eq, Ord)
+} deriving (Show, Eq, Ord, Traversable)
 
 instance FixedAnnotated MaybeTyped (Maybe AType) where
   getAnnotation = type_'
@@ -32,7 +33,7 @@ instance FixedAnnotated MaybeTyped (Maybe AType) where
 data Typed a = Typed {
   type_   :: AType,
   operand :: a
-} deriving (Show, Eq, Ord)
+} deriving (Show, Eq, Ord, Traversable)
 
 instance FixedAnnotated Typed AType where
   getAnnotation = type_

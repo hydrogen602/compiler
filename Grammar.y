@@ -12,42 +12,43 @@ import Util.Types
 import Util.Literals
 import Types.Addon
 import Types.Core
+import Extras.Position (Pos(Pos))
 
 
 }
 
 %name calc
-%tokentype { Token }
+%tokentype { WithPosition }
 %error { parseError }
 
 %token 
-      let             { Let }
-      const           { Const }
-      if              { If }
-      else            { Else }
-      while           { While }
-      int             { Integer $$ }
-      var             { Var $$ }
-      def             { Def }
-      println         { Print True }
-      print           { Print False }
-      str             { Str $$ }
-      return          { Return }
-      right_arrow     { RightArrow }
+      let             { WithPosition $$ Let }
+      const           { WithPosition _ Const }
+      if              { WithPosition _ If }
+      else            { WithPosition _ Else }
+      while           { WithPosition _ While }
+      int             { WithPosition _ (Integer $$) }
+      var             { WithPosition _ (Var $$) }
+      def             { WithPosition _ Def }
+      println         { WithPosition _ (Print True) }
+      print           { WithPosition _ (Print False) }
+      str             { WithPosition _ (Str $$) }
+      return          { WithPosition _ Return }
+      right_arrow     { WithPosition _ RightArrow }
 
-      '\n'            { NewLine }
-      ')'             { RParens }
-      '='             { Equals }
-      '('             { LParens }
-      '['             { LSqB }
-      ']'             { RSqB }
-      '{'             { LCurly }
-      '}'             { RCurly }
-      ','             { Comma }
-      ':'             { Colon }
-      '-'             { Sym '-' }
-      '+'             { Sym '+' }
-      '<'             { Sym '<' }
+      '\n'            { WithPosition _ NewLine }
+      ')'             { WithPosition _ RParens }
+      '='             { WithPosition _ Equals }
+      '('             { WithPosition _ LParens }
+      '['             { WithPosition _ LSqB }
+      ']'             { WithPosition _ RSqB }
+      '{'             { WithPosition _ LCurly }
+      '}'             { WithPosition _ RCurly }
+      ','             { WithPosition _ Comma }
+      ':'             { WithPosition _ Colon }
+      '-'             { WithPosition _ (Sym '-') }
+      '+'             { WithPosition _ (Sym '+') }
+      '<'             { WithPosition _ (Sym '<') }
 
 %right in
 %nonassoc '>' '<'
@@ -92,7 +93,7 @@ Block   : Stmt '\n' Block                          { ($1):($3) }
         | {- Empty -}                              { [] }
 
 Stmt    :: { Stmt MaybeTyped }
-        : let var '=' Expr                         { LetStmt (LocalVariable $2) $4 }
+        : let var '=' Expr                         { LetStmt (toPos $1) (LocalVariable $2) $4 }
         | var '=' Expr                             { AssignStmt (LocalVariable $1) $3 }
         | println str                              { PrintLiteralStmt UseNewLine $2 }
         | print str                                { PrintLiteralStmt NoUseNewLine $2 }
@@ -119,10 +120,12 @@ Value   : var                                      { Variabl (LocalVariable $1) 
 typeHelper :: String -> a -> Typed a
 typeHelper s = Typed $ TypeName s
 
+toPos = uncurry Pos . getLineColPair
+
 noType :: a -> MaybeTyped a
 noType = MaybeTyped Nothing
 
-parseError :: [Token] -> a
+parseError :: [WithPosition] -> a
 parseError tok = error $ "Parse error " ++ show tok
 
 parser :: String -> AST MaybeTyped

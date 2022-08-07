@@ -1,11 +1,11 @@
 {
-module Lexer (lexThis) where
+module Lexer (lexThis, WithPosition(..), getLineColPair) where
 
 import Data.Char
 import Token
 }
 
-%wrapper "basic"
+%wrapper "posn"
 
 $digit = 0-9		  	-- digits
 $alpha = [a-zA-Z]		-- alphabetic characters
@@ -14,36 +14,50 @@ $aw = [$white \n]
 
 tokens :-
 
-  \n$white*             { \s -> NewLine }
+  \n$white*             { helper' NewLine }
   $white+				        ;
   "--".*\n*				      ;
-  let  	                { \s -> Let }
-  const                 { \s -> Const }
-  if                    { \s -> If }
-  \n*else$aw*           { \s -> Else }
-  while                 { \s -> While }
-  def                   { \s -> Def }
-  println               { \s -> Print True }
-  print                 { \s -> Print False }
-  "-"?$digit+				    { \s -> Integer (read s) }
-  true                  { \s -> Integer 1 }
-  false                 { \s -> Integer 0 }
-  return                { \s -> Return }
-  \"[^\"]*\"            { strHelper }
-  \(                    { \s -> LParens }
-  \)                    { \s -> RParens }
-  \[                    { \s -> LSqB }
-  \]                    { \s -> RSqB }
-  \{$aw*                { \s -> LCurly }
-  \}                    { \s -> RCurly }
-  \=                    { \s -> Equals }
-  \,                    { \s -> Comma }
-  \:                    { \s -> Colon }
-  \-\>                  { \s -> RightArrow }
-  [\+\-\*\/\<\>]        { \s -> Sym (head s) }
-  $alpha [$alpha $digit \_]*		{ \s -> Var s }
+  let  	                { helper' Let }
+  const                 { helper' Const }
+  if                    { helper' If }
+  \n*else$aw*           { helper' Else }
+  while                 { helper' While }
+  def                   { helper' Def }
+  println               { helper' (Print True) }
+  print                 { helper' (Print False) }
+  "-"?$digit+				    { helper  (Integer . read) }
+  true                  { helper' (Integer 1) }
+  false                 { helper' (Integer 0) }
+  return                { helper' Return }
+  \"[^\"]*\"            { helper  strHelper }
+  \(                    { helper' LParens }
+  \)                    { helper' RParens }
+  \[                    { helper' LSqB }
+  \]                    { helper' RSqB }
+  \{$aw*                { helper' LCurly }
+  \}                    { helper' RCurly }
+  \=                    { helper' Equals }
+  \,                    { helper' Comma }
+  \:                    { helper' Colon }
+  \-\>                  { helper' RightArrow }
+  [\+\-\*\/\<\>]        { helper  (Sym . head) }
+  $alpha [$alpha $digit \_]*		{ helper Var }
 
 {
+
+data WithPosition = WithPosition {
+  pos   :: AlexPosn,
+  token :: Token
+  } deriving (Show, Eq)
+
+getLineColPair :: AlexPosn -> (Int, Int)
+getLineColPair (AlexPn _ line col) = (line,col)
+
+helper :: (String -> Token) -> AlexPosn -> String -> WithPosition
+helper convert pos = WithPosition pos . convert
+
+helper' :: Token -> AlexPosn -> String -> WithPosition
+helper' tok pos _ = WithPosition pos tok
 
 -- Each action has type :: String -> Token
 

@@ -44,8 +44,8 @@ astFunctionToFunction (ASTFunction name params ret code) = Function name params 
   where
     literals = getLiteralsFromStmts code
 
-astToProgram :: AST f -> Program f
-astToProgram (AST consts code) = Program functionMapping consts' code
+astToProgram :: FilePath -> AST f -> Program f
+astToProgram file (AST consts code) = Program functionMapping consts' code file
   where
     (constAssign, ast_funcs) = partitionEithers consts
     funcs = map astFunctionToFunction ast_funcs

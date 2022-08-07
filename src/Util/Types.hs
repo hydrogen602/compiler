@@ -9,6 +9,7 @@ import           Data.Maybe             (fromMaybe, listToMaybe)
 import qualified Data.Set               as Set
 
 import           Control.Monad.Identity (Identity)
+import           Extras.Position        (Pos)
 import           Extras.PrettyShow      (PrettyShow (..))
 import           Types.Addon            (Typed)
 import           Util.Classes           (Empty (empty), Nameable (..))
@@ -44,7 +45,7 @@ data Function f = Function {
 data UseNewLine = UseNewLine | NoUseNewLine deriving (Show, Eq, Ord)
 
 data Stmt f =
-    LetStmt LocalVariable (f (Expr f))
+    LetStmt Pos LocalVariable (f (Expr f))
   | AssignStmt LocalVariable (f (Expr f))
   | PrintStmt UseNewLine (f (Expr f))
   | PrintLiteralStmt UseNewLine String
@@ -88,10 +89,11 @@ foldStmtMap f = foldStmtr (flip (<>) . f) mempty
 data Program f = Program {
   functions :: Map.Map FunctionName (Function f),
   constants :: Consts,
-  code      :: [Stmt f]
+  code      :: [Stmt f],
+  filePath  :: FilePath
 } --deriving (Show, Eq, Ord)
 
-newProgram :: Program f
+newProgram :: FilePath -> Program f
 newProgram = Program mempty empty mempty
 
 

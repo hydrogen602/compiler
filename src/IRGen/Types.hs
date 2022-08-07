@@ -2,28 +2,31 @@
 
 module IRGen.Types where
 
-import           Control.Monad.Error.Class  (MonadError)
-import           Control.Monad.State.Strict (MonadState (get, put), State, gets,
-                                             modify)
-import qualified Data.Map.Strict            as Map
-import qualified Data.Text                  as T
-import qualified LLVM.AST                   as L
-import qualified LLVM.IRBuilder             as Module
+import           Control.Monad.Error.Class        (MonadError)
+import           Control.Monad.State.Strict       (MonadState (get, put), State,
+                                                   gets, modify)
+import           Data.Foldable                    (traverse_)
+import qualified Data.Map.Strict                  as Map
+import qualified Data.Text                        as T
+import qualified LLVM.AST                         as L
+import qualified LLVM.IRBuilder                   as Module
 
-import           Data.Foldable              (traverse_)
-import           Extras.PrettyShow          (PrettyShow (pshow))
-import           Extras.Scope               (Scope (Scope))
-import qualified Extras.Scope               as Scope
-import           LLVM.AST                   (Operand)
-import           Types.Addon                (Typed (..))
-import           Types.Core                 (AType)
-import qualified Types.Core                 as TC
-import           Util.Classes               (Empty (empty), Nameable (..))
-import           Util.CompileResult         (ErrorType (DuplicateNameError, DuplicateTypeError, UnknownFunctionError),
-                                             ResultFailed, ResultT, fromSuccess,
-                                             throwError)
-import           Util.Literals              (ConstValue)
-import           Util.Types                 (FunctionName, LocalVariable)
+import           Compat.Control.Monad.Error.Class (withError)
+import           Extras.Position                  (Pos)
+import           Extras.PrettyShow                (PrettyShow (pshow))
+import           Extras.Scope                     (Scope (Scope))
+import qualified Extras.Scope                     as Scope
+import           LLVM.AST                         (Operand)
+import           Types.Addon                      (Typed (..))
+import           Types.Core                       (AType)
+import qualified Types.Core                       as TC
+import           Util.Classes                     (Empty (empty), Nameable (..))
+import           Util.CompileResult               (ErrorType (DuplicateNameError, DuplicateTypeError, UnknownFunctionError),
+                                                   ResultFailed (errFile, errLoc),
+                                                   ResultT, fromSuccess,
+                                                   throwError)
+import           Util.Literals                    (ConstValue)
+import           Util.Types                       (FunctionName, LocalVariable)
 
 
 data ProgramEnv = ProgramEnv {
@@ -88,3 +91,10 @@ addVariable var_name op = do
 
 type LLVM = Module.ModuleBuilderT (ResultT (State ProgramEnv))
 type CodeGen = Module.IRBuilderT LLVM
+
+
+withPosition :: MonadError ResultFailed m => Pos -> m a -> m a
+withPosition pos = withError (\e -> e{errLoc=Just pos})
+
+withFile :: MonadError ResultFailed m => FilePath -> m a -> m a
+withFile file = withError (\e -> e{errFile=Just file})

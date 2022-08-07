@@ -5,6 +5,9 @@
 {-# LANGUAGE TupleSections         #-}
 
 module Util.CompileResult where
+
+import           Control.Monad.Error.Class  (MonadError)
+import qualified Control.Monad.Error.Class  as MError
 import           Control.Monad.Identity     (Identity (Identity, runIdentity))
 import           Control.Monad.State        (State, StateT (StateT), evalState,
                                              runState, runStateT, state,
@@ -13,24 +16,30 @@ import qualified Control.Monad.State        as StateModule
 import           Control.Monad.State.Class  (MonadState (get, put), gets,
                                              modify)
 import           Control.Monad.Trans        (MonadTrans (lift))
-import           Data.Functor               ((<&>))
-
 import           Control.Monad.Trans.Except
 import           Data.Bifunctor             (Bifunctor (first, second))
+import           Data.Functor               ((<&>))
 
-import           Control.Monad.Error.Class  (MonadError)
-import qualified Control.Monad.Error.Class  as MError
+import           Extras.Position            (Pos (Pos))
 import           Extras.PrettyShow          (PrettyShow (pshow))
 import           Util.Util                  (ddot, (<.>))
 
 data ResultFailed = ResultFailed {
+    errFile :: Maybe FilePath,
+    errLoc  :: Maybe Pos,
     errType :: ErrorType,
     errMsg  :: String
-  } deriving (Eq, Ord)
+  } deriving (Eq, Ord, Show)
 
-instance Show ResultFailed where
-  show ResultFailed{errType=errType, errMsg=errMsg} =
-    show errType ++ ": " ++ errMsg
+instance PrettyShow ResultFailed where
+  pshow ResultFailed{errFile=errFile, errLoc=errLoc, errType=errType, errMsg=errMsg} =
+    (case (errLoc, errFile) of
+      (Nothing, Nothing)                 -> ""
+      (Just loc, Nothing)                -> pshow loc
+      (Nothing, Just file)               -> "(" ++ file ++ ") "
+      (Just (Pos lines cols), Just file) ->
+        "(" ++ file ++ ":" ++ show lines ++ ":" ++ show cols ++ ") "
+    ) ++ show errType ++ ": " ++ errMsg
 
 
 type ResultT = ExceptT ResultFailed
@@ -52,10 +61,10 @@ data ErrorType =
   deriving (Show, Eq, Ord)
 
 throwError :: MonadError ResultFailed m => ErrorType -> String -> m a
-throwError = MError.throwError `ddot` ResultFailed
+throwError = MError.throwError `ddot` ResultFailed Nothing Nothing
 
 throwShowError :: (MonadError ResultFailed m, PrettyShow b) => ErrorType -> b -> m a
-throwShowError errType = MError.throwError . ResultFailed errType . pshow
+throwShowError errType = MError.throwError . ResultFailed Nothing Nothing errType . pshow
 
 -- catchAll :: Applicative m => ResultT m a -> ResultT m (Maybe a)
 -- catchAll re = undefined -- catchE
@@ -86,7 +95,7 @@ mapInnerMonad f = ExceptT . f . runExceptT
 
 fromSuccess :: Monad m => ResultT m a -> m a
 fromSuccess r = runExceptT r >>= \case
-    Left rf -> error $ show rf
+    Left rf -> error $ pshow rf
     Right a -> pure a
 
 

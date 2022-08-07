@@ -68,7 +68,7 @@ generateLib = do
 
 
 generateModule :: Program MaybeTyped -> Module
-generateModule (Program func_mapping consts code) = evalState (fromSuccess m) newProgramEnv
+generateModule (Program func_mapping consts code file) = evalState (fromSuccess m) newProgramEnv
   where
     funcs = mapM_ (withNewScope . generateFuncs) func_mapping
 
@@ -81,7 +81,7 @@ generateModule (Program func_mapping consts code) = evalState (fromSuccess m) ne
       funcs
       main
 
-    m = Module.buildModuleT "main" code_state
+    m = withFile file $ Module.buildModuleT "main" code_state
 
 
 generateExpr :: MaybeTyped (Expr MaybeTyped) -> CodeGen (Typed Operand)
@@ -122,7 +122,7 @@ makeNewVar (Typed ty lv) = do
 
 generateStmt :: Stmt MaybeTyped -> CodeGen ()
 generateStmt = \case
-  LetStmt lv ex          -> do
+  LetStmt pos lv ex          -> withPosition pos $ do
     val <- generateExpr ex
     var <- makeNewVar $ lv <$ val
     -- see https://llvm.org/docs/LangRef.html#store-instruction

@@ -41,10 +41,12 @@ library
         Extras.Misc
         Extras.Scope
         Extras.PrettyShow
+        Extras.Position
         IRGen.Types
         IRGen.MixedFunctions
         Types.Addon
         Types.Core
+        Compat.Control.Monad.Error.Class
     exposed-modules:
         Token
         Grammar
