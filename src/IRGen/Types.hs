@@ -12,6 +12,13 @@ import qualified LLVM.AST                         as L
 import qualified LLVM.IRBuilder                   as Module
 
 import           Compat.Control.Monad.Error.Class (withError)
+import           Core.Classes                     (Empty (empty), Nameable (..))
+import           Core.CompileResult               (ErrorType (DuplicateNameError, DuplicateTypeError, UnknownFunctionError),
+                                                   ResultFailed (errFile, errLoc),
+                                                   ResultT, fromSuccess,
+                                                   throwError)
+import           Core.Literals                    (ConstValue)
+import           Core.Types                       (FunctionName, LocalVariable)
 import           Extras.Position                  (Pos)
 import           Extras.PrettyShow                (PrettyShow (pshow))
 import           Extras.Scope                     (Scope (Scope))
@@ -20,13 +27,6 @@ import           LLVM.AST                         (Operand)
 import           Types.Addon                      (Typed (..))
 import           Types.Core                       (AType)
 import qualified Types.Core                       as TC
-import           Util.Classes                     (Empty (empty), Nameable (..))
-import           Util.CompileResult               (ErrorType (DuplicateNameError, DuplicateTypeError, UnknownFunctionError),
-                                                   ResultFailed (errFile, errLoc),
-                                                   ResultT, fromSuccess,
-                                                   throwError)
-import           Util.Literals                    (ConstValue)
-import           Util.Types                       (FunctionName, LocalVariable)
 
 
 data ProgramEnv = ProgramEnv {

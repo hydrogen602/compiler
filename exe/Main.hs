@@ -7,8 +7,8 @@ import           System.Environment     (getArgs)
 
 import           Grammar
 import           IRGen.CodeGenIR        (generate)
-import           Util.AST               (astToProgram)
-import           Util.Util
+import           Core.AST               (astToProgram)
+import           Core.Util
 
 
 main :: IO ()

@@ -2,7 +2,7 @@
 {-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Util.Types where
+module Core.Types where
 
 import qualified Data.Map.Strict        as Map
 import           Data.Maybe             (fromMaybe, listToMaybe)
@@ -12,8 +12,8 @@ import           Control.Monad.Identity (Identity)
 import           Extras.Position        (Pos)
 import           Extras.PrettyShow      (PrettyShow (..))
 import           Types.Addon            (Typed)
-import           Util.Classes           (Empty (empty), Nameable (..))
-import           Util.Literals
+import           Core.Classes           (Empty (empty), Nameable (..))
+import           Core.Literals
 
 
 newtype LocalVariable = LocalVariable {getLocalVariable :: String} deriving (Show, Eq, Ord) -- with type in the future

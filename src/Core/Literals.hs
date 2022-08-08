@@ -1,13 +1,13 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Util.Literals (ToLiteral(..), Literals2(..), ConstValue(..), Consts(..), ConstName(..), addLiteral2, singletonLiteral2) where
+module Core.Literals (ToLiteral(..), Literals2(..), ConstValue(..), Consts(..), ConstName(..), addLiteral2, singletonLiteral2) where
 
 import qualified Data.Map        as Map
 import qualified Data.Set        as Set
 import           Numeric.Natural (Natural)
 
-import           Util.Classes    (Empty (..), Nameable (..))
-import           Util.Util       (ddot)
+import           Core.Classes    (Empty (..), Nameable (..))
+import           Core.Util       (ddot)
 
 newtype ConstName = ConstName {getConstName :: String} deriving (Show, Eq, Ord)
 
@@ -31,25 +31,6 @@ instance Empty Consts where
 
 instance Nameable ConstName where
   getName = getConstName
-
--- getNextFreeConstNum :: Consts -> Int
--- getNextFreeConstNum Consts{getLiterals=mapping} =
---      1 + maybe (-1) fst (listToMaybe $ Map.toDescList mapping)
-
-
--- data Literals = LiteralsConstructor {
---     mapping       :: Map.Map ConstValue Natural,
---     current_count :: Natural
---     } deriving (Show, Eq, Ord)
-
--- instance Empty Literals where
---     empty = LiteralsConstructor mempty 0
-
--- addLiteral :: ConstValue -> Literals ->  Literals
--- addLiteral value literal@(LiteralsConstructor mapping current_count)
---     | Map.member value mapping = literal
---     | otherwise = LiteralsConstructor (Map.insert value current_count mapping) (current_count + 1)
-
 
 newtype Literals2 = Literals2 { getLiterals2 :: Set.Set ConstValue }
     deriving (Show, Eq, Ord)

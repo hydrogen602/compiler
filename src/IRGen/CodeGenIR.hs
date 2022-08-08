@@ -26,15 +26,16 @@ import           LLVM.Prelude               (ShortByteString, sequenceA_,
                                              traverse_)
 import           LLVM.Pretty                (ppllvm)
 
-import qualified Extras.Scope               as Scope
-import           Util.Classes               (Empty (empty), Nameable (..))
-import           Util.Literals              (ConstValue)
-import           Util.Types                 (Expr (..), Function (..),
+import           Core.Classes               (Empty (empty), Nameable (..))
+import           Core.Literals              (ConstValue)
+import           Core.Types                 (Expr (..), Function (..),
                                              FunctionName (FunctionName),
                                              LocalVariable, Op (..),
                                              Program (..), Stmt (..))
+import qualified Extras.Scope               as Scope
 
 import           Control.Monad.Trans.Except (runExceptT)
+import           Core.CompileResult         (fromSuccess)
 import           Extras.Conversion          (Into (into))
 import           Extras.Misc                (FixedAnnotated (getValue))
 import           IRGen.MixedFunctions       (addition, lessThan)
@@ -43,7 +44,6 @@ import           Types.Addon                (MaybeTyped (..), Typed (..),
                                              isType, toMaybeTyped, typeCheck,
                                              typeCheck', typeCheckFunction)
 import qualified Types.Core                 as Ty
-import           Util.CompileResult         (fromSuccess)
 
 
 generate :: Program MaybeTyped -> T.Text

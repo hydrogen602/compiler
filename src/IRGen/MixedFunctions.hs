@@ -3,12 +3,12 @@ module IRGen.MixedFunctions where
 import           LLVM.AST                   (Operand)
 import qualified LLVM.IRBuilder.Instruction as I
 
+import           Core.CompileResult         (ErrorType (TypeError), throwError)
 import           Extras.PrettyShow          (PrettyShow (pshow))
 import           IRGen.Types                (CodeGen)
 import           LLVM.AST.IntegerPredicate  (IntegerPredicate (SLT))
 import           Types.Addon                (Typed (Typed))
 import qualified Types.Core                 as Ty
-import           Util.CompileResult         (ErrorType (TypeError), throwError)
 
 addition :: Typed Operand -> Typed Operand -> CodeGen (Typed Operand)
 addition (Typed ta a) (Typed tb b)

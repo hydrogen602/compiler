@@ -1,4 +1,4 @@
-module Util.Util where
+module Core.Util where
 
 import           Control.Monad.State
 import           Data.List
@@ -7,20 +7,12 @@ unpackLs1 :: [a] -> a
 unpackLs1 [x] = x
 unpackLs1 _   = error "Expected one element in list"
 
--- containsSubList :: (Eq a) => [a] -> [a] -> Bool
--- containsSubList [] _ = True
--- containsSubList _ [] = False
--- containsSubList pre ls
---     | pre `isPrefixOf` ls = True
---     | otherwise = containsSubList pre (tail ls)
-
 argumentExtract :: String -> [String] -> Maybe String
 argumentExtract _ [] = Nothing
 argumentExtract _ [_] = Nothing
 argumentExtract name (e:arg:args)
     | name == e = Just arg
     | otherwise = argumentExtract name args
-
 
 removeLastOf3Tup :: (a, b, c) -> (a, b)
 removeLastOf3Tup (a, b, c) = (a, b)

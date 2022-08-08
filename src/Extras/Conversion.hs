@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
--- {-# LANGUAGE AllowAmbiguousTypes   #-}
 
 module Extras.Conversion where
 import           Data.String.Transform (ToShortByteString (toShortByteString))

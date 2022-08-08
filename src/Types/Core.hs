@@ -10,13 +10,13 @@ import qualified LLVM.AST.Type             as T
 
 import           Control.Monad.Error.Class (MonadError)
 import           Control.Monad.Identity    (Identity (runIdentity))
-import           Data.List                 (intercalate)
-import           Extras.PrettyShow
-import           Util.Classes              (Nameable (..))
-import           Util.CompileResult        (ErrorType (DuplicateTypeError, TypeError, UnknownTypeError),
+import           Core.Classes              (Nameable (..))
+import           Core.CompileResult        (ErrorType (DuplicateTypeError, TypeError, UnknownTypeError),
                                             ResultFailed, ResultT, fromSuccess,
                                             throwError)
-import           Util.Util                 (dddot, ddot, quote)
+import           Core.Util                 (dddot, ddot, quote)
+import           Data.List                 (intercalate)
+import           Extras.PrettyShow
 
 
 data AType =

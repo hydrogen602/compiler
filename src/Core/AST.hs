@@ -1,12 +1,12 @@
-module Util.AST where
+module Core.AST where
 import           Data.Either     (partitionEithers)
 import qualified Data.Map        as Map
 import           Data.Tree       (Tree)
 
 import           Extras.Position (Pos)
 import           Types.Addon     (Typed)
-import           Util.Literals
-import           Util.Types
+import           Core.Literals
+import           Core.Types
 
 data AST f = AST {
   consts :: [Constant f],

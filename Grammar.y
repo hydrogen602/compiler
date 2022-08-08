@@ -7,9 +7,9 @@ import Debug.Trace
 
 import Lexer
 import Token
-import Util.AST
-import Util.Types
-import Util.Literals
+import Core.AST
+import Core.Types
+import Core.Literals
 import Types.Addon
 import Types.Core
 import Extras.Position (Pos(Pos))

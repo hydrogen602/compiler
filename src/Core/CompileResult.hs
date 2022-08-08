@@ -4,7 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TupleSections         #-}
 
-module Util.CompileResult where
+module Core.CompileResult where
 
 import           Control.Monad.Error.Class  (MonadError)
 import qualified Control.Monad.Error.Class  as MError
@@ -22,7 +22,7 @@ import           Data.Functor               ((<&>))
 
 import           Extras.Position            (Pos (Pos))
 import           Extras.PrettyShow          (PrettyShow (pshow))
-import           Util.Util                  (ddot, (<.>))
+import           Core.Util                  (ddot, (<.>))
 
 data ResultFailed = ResultFailed {
     errFile :: Maybe FilePath,
@@ -76,11 +76,6 @@ catch err re = ExceptT $ runExceptT re <&> \case
 
 -- ResultT manipulation helpers
 
--- fromTransformer :: (m a -> b) -> ResultT m a -> Result b
--- fromTransformer runMonad = mapExceptT (Identity . runMonad)
---   where
---     f = runMonad
-
 toTransformer :: Monad m => Result a -> ResultT m a
 toTransformer = mapExceptT (pure . runIdentity)
 
@@ -97,19 +92,6 @@ fromSuccess :: Monad m => ResultT m a -> m a
 fromSuccess r = runExceptT r >>= \case
     Left rf -> error $ pshow rf
     Right a -> pure a
-
-
--- mapInnerMonad :: (m1 a -> m2 b) -> ResultT m1 a -> ResultT m2 b
--- mapInnerMonad mapFunc result = ResultT $ mapFunc (runResultT result)
---   where
---     x = mapFunc
---     func :: m1 (ResultBox a) -> m2 (ResultBox b)
---     func
-
--- Monad Specific
--- instance MonadState s (ResultT (State s)) where
---   get = ExceptT $ StateModule.gets Right
---   put = ExceptT . Right <.> StateModule.put
 
 
 getFirst :: ResultT (State (a, b)) a

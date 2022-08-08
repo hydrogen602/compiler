@@ -11,11 +11,11 @@ import           Control.Arrow             (Arrow (first))
 import           Control.Monad.Error.Class (MonadError)
 import           Data.Foldable             (traverse_)
 
+import           Core.CompileResult        (ErrorType (TypeError), ResultFailed,
+                                            throwError)
 import           Extras.Misc
 import           Extras.PrettyShow         (PrettyShow (pshow))
 import           Types.Core
-import           Util.CompileResult        (ErrorType (TypeError), ResultFailed,
-                                            throwError)
 
 
 -- data UnknownType = UnknownType deriving (Show, Eq, Ord)
@@ -42,15 +42,6 @@ instance FixedAnnotated Typed AType where
 
 toMaybeTyped :: Typed a -> MaybeTyped a
 toMaybeTyped = uncurry fromPair . first Just . toPair
-
--- instance Functor Typed where
---   fmap f (Typed t op) = Typed t (f op)
-
--- instance Foldable Typed where
---   foldMap f (Typed _ val) = f val
-
--- instance Traversable Typed where
---   traverse f (Typed type_ val) = Typed type_ <$> f val
 
 typeCheck :: MonadError ResultFailed m => AType -> Typed a -> m (Typed a)
 typeCheck aType typed
@@ -83,20 +74,3 @@ isCompatibleType (MaybeTyped (Just ty) _) = (ty ==)
 
 isType :: Typed a -> AType -> Bool
 isType (Typed ty _) = (ty ==)
-
--- data SomeTypedOperand f = TypedOperand {
---   type_   :: f Typed,
---   operand :: L.Operand
--- }
-
-
-
--- type UnresolvedTypedOperand = SomeTypedOperand (Either UnknownType)
--- deriving instance Show UnresolvedTypedOperand
--- deriving instance Ord UnresolvedTypedOperand
--- deriving instance Eq UnresolvedTypedOperand
-
--- type TypedOperand = SomeTypedOperand Identity
--- deriving instance Show TypedOperand
--- deriving instance Ord TypedOperand
--- deriving instance Eq TypedOperand

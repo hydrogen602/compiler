@@ -6,12 +6,12 @@ import qualified Data.Map.Strict           as Map
 import           Prelude                   hiding (fromMaybe)
 
 import           Control.Monad.Error.Class (MonadError)
-import           Extras.Misc               (firstJust)
-import           Util.Classes              (Empty (..))
-import           Util.CompileResult        (ErrorType (DuplicateNameError, UnknownVariableError),
+import           Core.Classes              (Empty (..))
+import           Core.CompileResult        (ErrorType (DuplicateNameError, UnknownVariableError),
                                             ResultFailed, ResultT, fromMaybe,
                                             throwError)
-import           Util.Types                (LocalVariable)
+import           Core.Types                (LocalVariable)
+import           Extras.Misc               (firstJust)
 
 data Scope k v = Scope {
   values       :: Map.Map k v,
