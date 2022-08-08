@@ -21,7 +21,6 @@ data Token =
   Comma       |
   Colon       |
   Return      |
-  Print Bool  |
   Const       |
   RightArrow  |
   Sym Char    |

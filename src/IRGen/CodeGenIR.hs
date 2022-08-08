@@ -32,8 +32,7 @@ import           Util.Literals              (ConstValue)
 import           Util.Types                 (Expr (..), Function (..),
                                              FunctionName (FunctionName),
                                              LocalVariable, Op (..),
-                                             Program (..), Stmt (..),
-                                             UseNewLine (NoUseNewLine, UseNewLine))
+                                             Program (..), Stmt (..))
 
 import           Control.Monad.Trans.Except (runExceptT)
 import           Extras.Conversion          (Into (into))
@@ -55,8 +54,8 @@ generateLib :: LLVM ()
 generateLib = do
   let
     lib = [
-      (Ty.FunctionType [Ty.i32] Ty.unit, "print___i32"),
-      (Ty.FunctionType [Ty.i32] Ty.unit, "println___i32")
+      (Ty.FunctionType [Ty.i32] Ty.unit, "print"),
+      (Ty.FunctionType [Ty.i32] Ty.unit, "println")
       ]
 
   traverse_ (\(ftype@(Ty.FunctionType args out), f_name) -> do
@@ -132,19 +131,6 @@ generateStmt = \case
     val <- generateExpr ex
     typeCheck (type_ var) val
     I.store (getValue var) 0 (getValue val)
-  PrintStmt unl ex       -> do
-    var <- generateExpr ex
-    typeCheck Ty.i32 var
-    func_mapping <- gets funcs
-    let
-      f_name = case unl of
-        UseNewLine   -> FunctionName "println___i32"
-        NoUseNewLine -> FunctionName "print___i32"
-    -- ToDo: remove this in favor of generic functions
-    f <- getValue <$> lookupFunction f_name
-    I.call f $ map (,[]) [getValue var]
-    pure ()
-  PrintLiteralStmt unl s -> error "Not yet implemented"
   FuncCall f_name exs        -> do
     func <- lookupFunction f_name
 
@@ -194,7 +180,7 @@ generateStmt = \case
 
 
 generateFuncs :: Function MaybeTyped -> LLVM (Typed Operand)
-generateFuncs (Function func_name params ret code literals) = mdo
+generateFuncs (Function pos func_name params ret code literals) = withPosition pos $ mdo
   let
     param_names = map (toShortByteString . getName . getValue) params
     param_types = map type_ params

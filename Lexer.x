@@ -23,8 +23,6 @@ tokens :-
   \n*else$aw*           { helper' Else }
   while                 { helper' While }
   def                   { helper' Def }
-  println               { helper' (Print True) }
-  print                 { helper' (Print False) }
   "-"?$digit+				    { helper  (Integer . read) }
   true                  { helper' (Integer 1) }
   false                 { helper' (Integer 0) }

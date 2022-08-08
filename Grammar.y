@@ -29,9 +29,7 @@ import Extras.Position (Pos(Pos))
       while           { WithPosition _ While }
       int             { WithPosition _ (Integer $$) }
       var             { WithPosition _ (Var $$) }
-      def             { WithPosition _ Def }
-      println         { WithPosition _ (Print True) }
-      print           { WithPosition _ (Print False) }
+      def             { WithPosition $$ Def }
       str             { WithPosition _ (Str $$) }
       return          { WithPosition _ Return }
       right_arrow     { WithPosition _ RightArrow }
@@ -65,7 +63,7 @@ Start   : '\n' Start                               { $2 }
 CStmt   : const var '=' str                        { Left (ConstName ($2), ConstValueStr ($4)) }
         | Func                                     { Right $1 }
 
-Func    : def var '(' MParams ')' right_arrow var '{' Block Return '}'  { ASTFunction (FunctionName ($2)) ($4) (typeHelper $7 ()) (($9)++($10)) }
+Func    : def var '(' MParams ')' right_arrow var '{' Block Return '}'  { ASTFunction (toPos $1) (FunctionName ($2)) ($4) (typeHelper $7 ()) (($9)++($10)) }
 
 Return  : return Expr '\n'                         { [ReturnStmt ($2)] }
         | {- Empty -}                              { [] }
@@ -95,10 +93,6 @@ Block   : Stmt '\n' Block                          { ($1):($3) }
 Stmt    :: { Stmt MaybeTyped }
         : let var '=' Expr                         { LetStmt (toPos $1) (LocalVariable $2) $4 }
         | var '=' Expr                             { AssignStmt (LocalVariable $1) $3 }
-        | println str                              { PrintLiteralStmt UseNewLine $2 }
-        | print str                                { PrintLiteralStmt NoUseNewLine $2 }
-        | println Expr                             { PrintStmt UseNewLine $2 }
-        | print Expr                               { PrintStmt NoUseNewLine $2 }
         | if Expr '{' Block '}' ElseP              { IfStmt $2 $4 $6 }
         | while Expr '{' Block '}'                 { WhileStmt $2 $4 }
         | var '(' Args ')'                         { FuncCall (FunctionName $1) $3 }

@@ -1,5 +1,5 @@
 #include <stdio.h>
 
-void print___i32(int c) { printf("%d", c); }
+void print(int c) { printf("%d", c); }
 
-void println___i32(int c) { printf("%d\n", c); }
+void println(int c) { printf("%d\n", c); }

@@ -32,6 +32,7 @@ instance PrettyShow FunctionName where
 -- Consts
 
 data Function f = Function {
+  position     :: Pos,
   functionName :: FunctionName,
   params       :: [Typed LocalVariable],
   return_      :: Typed (),
@@ -42,13 +43,9 @@ data Function f = Function {
 
 -- Code
 
-data UseNewLine = UseNewLine | NoUseNewLine deriving (Show, Eq, Ord)
-
 data Stmt f =
     LetStmt Pos LocalVariable (f (Expr f))
   | AssignStmt LocalVariable (f (Expr f))
-  | PrintStmt UseNewLine (f (Expr f))
-  | PrintLiteralStmt UseNewLine String
   | FuncCall FunctionName [f (Expr f)]
   | IfStmt (f (Expr f)) [Stmt f] [Stmt f]
   | WhileStmt (f (Expr f)) [Stmt f]

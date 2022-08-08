@@ -1,9 +1,10 @@
 module Util.AST where
-import           Data.Either   (partitionEithers)
-import qualified Data.Map      as Map
-import           Data.Tree     (Tree)
+import           Data.Either     (partitionEithers)
+import qualified Data.Map        as Map
+import           Data.Tree       (Tree)
 
-import           Types.Addon   (Typed)
+import           Extras.Position (Pos)
+import           Types.Addon     (Typed)
 import           Util.Literals
 import           Util.Types
 
@@ -13,6 +14,7 @@ data AST f = AST {
   } --deriving (Show, Eq, Ord)
 
 data ASTFunction f = ASTFunction {
+  position :: Pos,
   name     :: FunctionName,
   params   :: [Typed LocalVariable],
   ret      :: Typed (),
@@ -36,11 +38,11 @@ getLiteralsFromStmts :: [Stmt f] -> Literals2
 getLiteralsFromStmts = foldMap $ foldStmtMap getConstFromStmt
 
 getConstFromStmt :: Stmt f -> Literals2
-getConstFromStmt (PrintLiteralStmt _ s) = singletonLiteral2 $ ConstValueStr s
+-- getConstFromStmt (PrintLiteralStmt _ s) = singletonLiteral2 $ ConstValueStr s
 getConstFromStmt _                      = mempty
 
 astFunctionToFunction :: ASTFunction f -> Function f
-astFunctionToFunction (ASTFunction name params ret code) = Function name params ret code literals
+astFunctionToFunction (ASTFunction pos name params ret code) = Function pos name params ret code literals
   where
     literals = getLiteralsFromStmts code
 

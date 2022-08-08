@@ -3,7 +3,7 @@ def f(x: i32) -> i32 {
   return x + 3
 }
 
-let c = 20 + b
+let c = 20
 
 if 100 < c {
   println(c)
