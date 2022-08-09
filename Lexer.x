@@ -18,6 +18,7 @@ tokens :-
   $white+				        ;
   "--".*\n*				      ;
   let  	                { helper' Let }
+  mut                   { helper' Mut }
   const                 { helper' Const }
   if                    { helper' If }
   \n*else$aw*           { helper' Else }

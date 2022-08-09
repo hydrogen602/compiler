@@ -37,7 +37,7 @@ import           Core.Types                 (Expr (..), Function (..),
 import           Extras.Conversion          (Into (into))
 import           Extras.FixedAnnotated      (FixedAnnotated (getValue))
 import qualified Extras.Scope               as Scope
-import           IRGen.Basics               (makeNewVar, toLLVMName)
+import           IRGen.Basics
 import           IRGen.MixedFunctions       (addition, lessThan)
 import           IRGen.Types
 import           Types.Addon                (MaybeTyped (..), Typed (..),
@@ -87,9 +87,7 @@ generateExpr :: MaybeTyped (Expr MaybeTyped) -> CodeGen (Typed Operand)
 generateExpr (MaybeTyped type_ expr) = typeCheck' type_ $ helper expr
   where
     helper :: Expr MaybeTyped -> CodeGen (Typed Operand)
-    helper (Variabl name)         = do
-      op <- lookupVariable name
-      sequenceA $ flip I.load 0 <$> op
+    helper (Variabl name)         = getVarValue name
     helper (Immediate n)          =
       pure $ Typed Ty.i32 $ ConstantOperand $ C.Int 32 (fromIntegral n)
     helper (Expr op e1 e2)        = do
@@ -112,11 +110,13 @@ generateExpr (MaybeTyped type_ expr) = typeCheck' type_ $ helper expr
 
 generateStmt :: Stmt MaybeTyped -> CodeGen ()
 generateStmt = \case
+  LetMutStmt pos lv ex          -> withPosition pos $ do
+    val <- generateExpr ex
+    -- see https://llvm.org/docs/LangRef.html#store-instruction
+    void $ makeNewVar Mutable val lv
   LetStmt pos lv ex          -> withPosition pos $ do
     val <- generateExpr ex
     void $ makeNewVar Frozen val lv
-    -- see https://llvm.org/docs/LangRef.html#store-instruction
-    -- I.store (getValue var) 0 (getValue val)
   AssignStmt pos lv ex       -> withPosition pos $ do
     var <- lookupVariableMutable lv
     val <- generateExpr ex

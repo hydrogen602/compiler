@@ -13,7 +13,7 @@ else {
   println(c)
 }
 
-let x = 5
+let mut x = 5
 let y = 1
 
 println(f(y))

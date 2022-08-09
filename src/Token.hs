@@ -5,6 +5,7 @@ module Token where
 data Token =
   NewLine     |
   Let         |
+  Mut         |
   If          |
   Else        |
   While       |

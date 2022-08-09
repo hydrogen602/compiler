@@ -23,6 +23,7 @@ import Extras.Position (Pos(Pos))
 
 %token 
       let             { WithPosition $$ Let }
+      mut             { WithPosition $$ Mut }
       const           { WithPosition _ Const }
       if              { WithPosition _ If }
       else            { WithPosition _ Else }
@@ -90,7 +91,8 @@ Block   : Stmt '\n' Block                          { ($1):($3) }
         | {- Empty -}                              { [] }
 
 Stmt    :: { Stmt MaybeTyped }
-        : let var '=' Expr                         { LetStmt (toPos $1) (LocalVariable $2) $4 }
+        : let mut var '=' Expr                     { LetMutStmt (toPos $1) (LocalVariable $3) $5 }
+        | let var '=' Expr                         { LetStmt (toPos $1) (LocalVariable $2) $4 }
         | var '=' Expr                             { AssignStmt (toPos $2) (LocalVariable $1) $3 }
         | if Expr '{' Block '}' ElseP              { IfStmt $2 $4 $6 }
         | while Expr '{' Block '}'                 { WhileStmt $2 $4 }

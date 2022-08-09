@@ -48,6 +48,7 @@ data Function f = Function {
 
 data Stmt f =
     LetStmt Pos LocalVariable (f (Expr f))
+  | LetMutStmt Pos LocalVariable (f (Expr f))
   | AssignStmt Pos LocalVariable (f (Expr f))
   | FuncCall FunctionName [f (Expr f)]
   | IfStmt (f (Expr f)) [Stmt f] [Stmt f]

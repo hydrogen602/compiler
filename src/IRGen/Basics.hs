@@ -10,7 +10,7 @@ import           Core.Types                 (LocalVariable)
 import           Extras.FixedAnnotated      (FixedAnnotated (getValue))
 import           IRGen.Types                (CodeGen, Mutability (..),
                                              Variable (Variable), addVariable,
-                                             lookupType)
+                                             lookupType, lookupVariable)
 import           Types.Addon                (Typed (..))
 
 
@@ -28,3 +28,13 @@ makeNewVar Mutable (Typed ty op) lv = do
   addVariable lv (Variable Mutable var)
   I.store (getValue var) 0 op
   pure var
+
+
+getVarValue :: LocalVariable -> CodeGen (Typed Operand)
+getVarValue name = do
+  var <- lookupVariable name
+  case var of
+    Variable Frozen typed -> pure typed
+    Variable Mutable typed ->
+      sequenceA $ flip I.load 0 <$> typed
+

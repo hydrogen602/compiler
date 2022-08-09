@@ -64,12 +64,10 @@ lookupType name = do
 
 -- | Lookup a variable for reading, not writing
 -- returns both mutable and immutable
-lookupVariable :: (MonadState ProgramEnv m, MonadError ResultFailed m) => LocalVariable -> m (Typed Operand)
+lookupVariable :: (MonadState ProgramEnv m, MonadError ResultFailed m) => LocalVariable -> m Variable
 lookupVariable name = do
   scope <- gets locals
-  var <- scope Scope.!! name
-  case var of
-    Variable _ ty -> pure ty
+  scope Scope.!! name
 
 
 -- | Lookup a variable for writing

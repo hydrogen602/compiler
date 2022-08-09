@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 import           Control.Monad.Except   (runExceptT)
 import           Control.Monad.Identity (Identity (runIdentity))
 import qualified Data.Text.Lazy         as T
@@ -49,7 +51,7 @@ mainOpts (Options inFile rawOutFile irOnly llcPath) = do
   let -- config output
     ast = parser fileContent
     program = astToProgram inFile ast
-    ir = generate program
+    !ir = generate program  -- throw errors out here?
 
   if irOnly then
     TIO.writeFile outFile ir
