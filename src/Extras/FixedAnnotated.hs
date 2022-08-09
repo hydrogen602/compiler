@@ -2,7 +2,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
-module Extras.Misc where
+module Extras.FixedAnnotated where
 
 import           Control.Arrow (second, (&&&))
 

@@ -5,8 +5,9 @@
 
 module IRGen.CodeGenIR (generate) where
 
-import           Control.Monad              (forM_, unless)
+import           Control.Monad              (forM_, unless, void)
 import           Control.Monad.State.Strict (evalState, gets)
+import           Control.Monad.Trans.Except (runExceptT)
 import qualified Data.Map                   as Map
 import           Data.String.Transform      (toShortByteString)
 import           Data.Text.Lazy             (Text)
@@ -27,17 +28,16 @@ import           LLVM.Prelude               (ShortByteString, sequenceA_,
 import           LLVM.Pretty                (ppllvm)
 
 import           Core.Classes               (Empty (empty), Nameable (..))
+import           Core.CompileResult         (fromSuccess)
 import           Core.Literals              (ConstValue)
 import           Core.Types                 (Expr (..), Function (..),
                                              FunctionName (FunctionName),
                                              LocalVariable, Op (..),
                                              Program (..), Stmt (..))
-import qualified Extras.Scope               as Scope
-
-import           Control.Monad.Trans.Except (runExceptT)
-import           Core.CompileResult         (fromSuccess)
 import           Extras.Conversion          (Into (into))
-import           Extras.Misc                (FixedAnnotated (getValue))
+import           Extras.FixedAnnotated      (FixedAnnotated (getValue))
+import qualified Extras.Scope               as Scope
+import           IRGen.Basics               (makeNewVar, toLLVMName)
 import           IRGen.MixedFunctions       (addition, lessThan)
 import           IRGen.Types
 import           Types.Addon                (MaybeTyped (..), Typed (..),
@@ -110,24 +110,15 @@ generateExpr (MaybeTyped type_ expr) = typeCheck' type_ $ helper expr
       fmap (Typed ret) $ I.call f $ map ((,[]) . getValue) params_ops
 
 
-makeNewVar :: Typed LocalVariable -> CodeGen (Typed Operand)
-makeNewVar (Typed ty lv) = do
-  let
-    var = LocalReference Types.i32 $ toLLVMName lv
-  var <- Typed ty <$> I.alloca Types.i32 Nothing 0
-  addVariable lv var
-  pure var
-
-
 generateStmt :: Stmt MaybeTyped -> CodeGen ()
 generateStmt = \case
   LetStmt pos lv ex          -> withPosition pos $ do
     val <- generateExpr ex
-    var <- makeNewVar $ lv <$ val
+    void $ makeNewVar Frozen val lv
     -- see https://llvm.org/docs/LangRef.html#store-instruction
-    I.store (getValue var) 0 (getValue val)
-  AssignStmt lv ex       -> do
-    var <- (Scope.! lv) <$> gets locals
+    -- I.store (getValue var) 0 (getValue val)
+  AssignStmt pos lv ex       -> withPosition pos $ do
+    var <- lookupVariableMutable lv
     val <- generateExpr ex
     typeCheck (type_ var) val
     I.store (getValue var) 0 (getValue val)
@@ -195,10 +186,9 @@ generateFuncs (Function pos func_name params ret code literals) = withPosition p
 
   f <- fmap add_types $ Module.function (toLLVMName func_name) params_with_types ret_llvm_type $ \param_ops -> do
     let params_pairs = zip params param_ops
-    traverse_ (\(name, op) -> do
-      -- TODO: copying all args doesn't seem great
-      var_op <- makeNewVar name
-      I.store (getValue var_op) 0 op
+    traverse_ (\(typed_name, op) -> do
+      let typed_op = op <$ typed_name
+      makeNewVar Frozen typed_op (getValue typed_name)
       ) params_pairs
 
     forM_ code generateStmt
@@ -206,9 +196,6 @@ generateFuncs (Function pos func_name params ret code literals) = withPosition p
   addFunction func_name f
   pure f
 
-
-toLLVMName :: Nameable a => a -> Name
-toLLVMName = mkName . getName
 
 checkForExit :: CodeGen () -> CodeGen ()
 checkForExit m = do

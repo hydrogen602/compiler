@@ -1,7 +1,5 @@
 module Token where
 
-import           Extras.Misc (FixedAnnotated (..))
-
 
 -- The token type:
 data Token =

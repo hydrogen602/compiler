@@ -20,9 +20,9 @@ import           Control.Monad.Trans.Except
 import           Data.Bifunctor             (Bifunctor (first, second))
 import           Data.Functor               ((<&>))
 
+import           Core.Util                  (ddot, (<.>))
 import           Extras.Position            (Pos (Pos))
 import           Extras.PrettyShow          (PrettyShow (pshow))
-import           Core.Util                  (ddot, (<.>))
 
 data ResultFailed = ResultFailed {
     errFile :: Maybe FilePath,
@@ -58,6 +58,7 @@ data ErrorType =
   | LabelConflictError
   | InvalidVariableNameError
   | TypeError
+  | ImmutableVariableError
   deriving (Show, Eq, Ord)
 
 throwError :: MonadError ResultFailed m => ErrorType -> String -> m a

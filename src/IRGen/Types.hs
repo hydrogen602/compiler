@@ -13,7 +13,7 @@ import qualified LLVM.IRBuilder                   as Module
 
 import           Compat.Control.Monad.Error.Class (withError)
 import           Core.Classes                     (Empty (empty), Nameable (..))
-import           Core.CompileResult               (ErrorType (DuplicateNameError, DuplicateTypeError, UnknownFunctionError),
+import           Core.CompileResult               (ErrorType (DuplicateNameError, DuplicateTypeError, ImmutableVariableError, UnknownFunctionError),
                                                    ResultFailed (errFile, errLoc),
                                                    ResultT, fromSuccess,
                                                    throwError)
@@ -29,10 +29,17 @@ import           Types.Core                       (AType)
 import qualified Types.Core                       as TC
 
 
+data Mutability = Mutable | Frozen deriving (Show, Eq, Ord)
+data Variable = Variable {
+  mutability :: Mutability,
+  variable   :: Typed Operand
+  } deriving (Show, Eq, Ord)
+
+
 data ProgramEnv = ProgramEnv {
   funcs  :: Map.Map FunctionName (Typed Operand),
   consts :: Map.Map ConstValue (Typed Operand),
-  locals :: Scope.Scope LocalVariable (Typed Operand),
+  locals :: Scope.Scope LocalVariable Variable,
   types  :: TC.TypeTracker
 }
 
@@ -55,10 +62,25 @@ lookupType name = do
   TC.get name ty
 
 
+-- | Lookup a variable for reading, not writing
+-- returns both mutable and immutable
 lookupVariable :: (MonadState ProgramEnv m, MonadError ResultFailed m) => LocalVariable -> m (Typed Operand)
 lookupVariable name = do
   scope <- gets locals
-  scope Scope.!! name
+  var <- scope Scope.!! name
+  case var of
+    Variable _ ty -> pure ty
+
+
+-- | Lookup a variable for writing
+-- throws an error if its immutable
+lookupVariableMutable :: (MonadState ProgramEnv m, MonadError ResultFailed m) => LocalVariable -> m (Typed Operand)
+lookupVariableMutable name = do
+  scope <- gets locals
+  var <- scope Scope.!! name
+  case var of
+    Variable Mutable ty -> pure ty
+    Variable Frozen ty  -> throwError ImmutableVariableError $ pshow name
 
 
 lookupFunction :: (MonadState ProgramEnv m, MonadError ResultFailed m) => FunctionName -> m (Typed Operand)
@@ -82,7 +104,7 @@ addFunction func_name typed@(Typed type_ _) = do
     put $ program{funcs=Map.insert func_name typed (funcs program)}
 
 
-addVariable :: (MonadState ProgramEnv m, MonadError ResultFailed m) => LocalVariable -> Typed Operand -> m ()
+addVariable :: (MonadState ProgramEnv m, MonadError ResultFailed m) => LocalVariable -> Variable -> m ()
 addVariable var_name op = do
   program <- get
   new_locals <- Scope.insertUnique var_name op (locals program)

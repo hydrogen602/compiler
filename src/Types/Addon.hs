@@ -13,7 +13,7 @@ import           Data.Foldable             (traverse_)
 
 import           Core.CompileResult        (ErrorType (TypeError), ResultFailed,
                                             throwError)
-import           Extras.Misc
+import           Extras.FixedAnnotated
 import           Extras.PrettyShow         (PrettyShow (pshow))
 import           Types.Core
 

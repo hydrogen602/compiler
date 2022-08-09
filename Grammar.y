@@ -36,7 +36,7 @@ import Extras.Position (Pos(Pos))
 
       '\n'            { WithPosition _ NewLine }
       ')'             { WithPosition _ RParens }
-      '='             { WithPosition _ Equals }
+      '='             { WithPosition $$ Equals }
       '('             { WithPosition _ LParens }
       '['             { WithPosition _ LSqB }
       ']'             { WithPosition _ RSqB }
@@ -76,7 +76,6 @@ Params  : var ':' var Params2                      { (typeHelper $3 (LocalVariab
 Params2 : ',' Params                               { $2 }
         | {- Empty -}                              { [] }
 
--- Typed   : var ':' var                              { TypedParam ($1) ($3) }
 
 Args    :: { [MaybeTyped (Expr MaybeTyped)] }
         : Expr Args2                               { ($1):($2) }
@@ -92,7 +91,7 @@ Block   : Stmt '\n' Block                          { ($1):($3) }
 
 Stmt    :: { Stmt MaybeTyped }
         : let var '=' Expr                         { LetStmt (toPos $1) (LocalVariable $2) $4 }
-        | var '=' Expr                             { AssignStmt (LocalVariable $1) $3 }
+        | var '=' Expr                             { AssignStmt (toPos $2) (LocalVariable $1) $3 }
         | if Expr '{' Block '}' ElseP              { IfStmt $2 $4 $6 }
         | while Expr '{' Block '}'                 { WhileStmt $2 $4 }
         | var '(' Args ')'                         { FuncCall (FunctionName $1) $3 }

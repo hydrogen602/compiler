@@ -11,7 +11,7 @@ import           Core.CompileResult        (ErrorType (DuplicateNameError, Unkno
                                             ResultFailed, ResultT, fromMaybe,
                                             throwError)
 import           Core.Types                (LocalVariable)
-import           Extras.Misc               (firstJust)
+import           Extras.FixedAnnotated     (firstJust)
 
 data Scope k v = Scope {
   values       :: Map.Map k v,

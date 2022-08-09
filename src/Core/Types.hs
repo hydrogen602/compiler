@@ -9,11 +9,11 @@ import           Data.Maybe             (fromMaybe, listToMaybe)
 import qualified Data.Set               as Set
 
 import           Control.Monad.Identity (Identity)
+import           Core.Classes           (Empty (empty), Nameable (..))
+import           Core.Literals
 import           Extras.Position        (Pos)
 import           Extras.PrettyShow      (PrettyShow (..))
 import           Types.Addon            (Typed)
-import           Core.Classes           (Empty (empty), Nameable (..))
-import           Core.Literals
 
 
 newtype LocalVariable = LocalVariable {getLocalVariable :: String} deriving (Show, Eq, Ord) -- with type in the future
@@ -21,6 +21,9 @@ newtype FunctionName = FunctionName {getFunctionName :: String} deriving (Show, 
 
 instance Nameable LocalVariable where
   getName = getLocalVariable
+
+instance PrettyShow LocalVariable where
+  pshow = getLocalVariable
 
 instance Nameable FunctionName where
   getName = getFunctionName
@@ -45,7 +48,7 @@ data Function f = Function {
 
 data Stmt f =
     LetStmt Pos LocalVariable (f (Expr f))
-  | AssignStmt LocalVariable (f (Expr f))
+  | AssignStmt Pos LocalVariable (f (Expr f))
   | FuncCall FunctionName [f (Expr f)]
   | IfStmt (f (Expr f)) [Stmt f] [Stmt f]
   | WhileStmt (f (Expr f)) [Stmt f]
@@ -68,19 +71,6 @@ foldStmtr f init stmt = aFinal
 
 foldStmtMap :: Monoid a => (Stmt f -> a) -> Stmt f -> a
 foldStmtMap f = foldStmtr (flip (<>) . f) mempty
-
-
-
--- data Scope =
---   Scope
---     {
---       locals :: Set.Set LocalVariable,
---       code   :: [Stmt]
---     }
---   deriving (Show, Eq, Ord)
-
--- newScope :: Scope
--- newScope = Scope mempty mempty
 
 
 data Program f = Program {
