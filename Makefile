@@ -1,53 +1,56 @@
-.PHONY: build xclean clean run lib
+.PHONY: build xclean clean run
 
 SRCS = $(shell find src -type f -name '*.hs')
 
-GENERATED = Lexer.hs Grammar.hs
+GENERATED = src/Lexer.hs src/Grammar.hs
 
 export PATH := /opt/homebrew/opt/llvm@11/bin:$(PATH)
 export LDFLAGS := -L/opt/homebrew/opt/llvm@11/lib
 export CPPFLAGS := -I/usr/homebrew/opt/llvm@11/include
 SHELL := env PATH=$(PATH) /bin/bash
 
+LIB = libc/libc.a
 
-EXTRAS = $(shell find libc -type f -name '*.o')
+# Configs
+BUILD_DIR = build
+EXE_NAME = ${BUILD_DIR}/main
 
 # Compiling
 
-run: a.out
-	./a.out
+run: ${EXE_NAME}
+	@./${EXE_NAME}
 
-out.ll: ${SRCS} ${GENERATED}
-	cabal run exe:compiler -- -i test_basic.idk -o out.ll
+# out.ll: ${SRCS} ${GENERATED}
+# 	cabal run exe:compiler -- -i test_basic.idk -o out.ll -c
 
-out.o: out.ll
-	llc out.ll -filetype=obj
+${BUILD_DIR}/out.o: ${SRCS} ${GENERATED} test_basic.idk
+	cabal run exe:compiler -- -i test_basic.idk -o $@
 
-a.out: out.o lib
-	@# I can't figure out llvm-link
-	ld out.o ${EXTRAS} -lSystem -L$(shell xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib/
+${EXE_NAME}: ${BUILD_DIR}/out.o ${LIB}
+	clang ${BUILD_DIR}/out.o ${LIB} -o $@
 
 
 # Haskell building & other setup
 
-lib:
+${LIB}:
 	$(MAKE) -C libc
 
-build: ${SRCS} ${GENERATED}
-	cabal build exe:compiler
+# build: ${SRCS} ${GENERATED}
+# 	cabal build exe:compiler
 
-Lexer.hs: Lexer.x
-	alex Lexer.x --outfile=src/Lexer.hs
+src/Lexer.hs: Lexer.x
+	alex Lexer.x --outfile=$@
 
-Grammar.hs: Grammar.y src/Token.hs src/Lexer.hs
-	happy Grammar.y --outfile=src/Grammar.hs
+src/Grammar.hs: Grammar.y src/Token.hs src/Lexer.hs
+	happy Grammar.y --outfile=$@
 
 # cleanup
 
 clean:
 	cabal clean
-	rm -f *.ll *.o 
+	rm -f *.ll *.o
 	$(MAKE) -C libc clean
 
 xclean: clean
-	rm -f ${GENERATED}
+	rm -f ${GENERATED} ${EXE_NAME}
+	$(MAKE) -C libc xclean

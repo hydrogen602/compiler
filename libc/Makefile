@@ -11,9 +11,9 @@ SHELL := env PATH=$(PATH) /bin/bash
 SRCS := $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 
-.PHONY: all clean xclean
+.PHONY: clean xclean
 
-all: ${OBJS}
+libc.a: ${OBJS}
 	llvm-ar r libc.a ${OBJS}
 
 $(objects): %.o: %.c

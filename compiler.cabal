@@ -74,6 +74,8 @@ executable compiler
         compiler,
         containers,
         mtl,
-        text
+        text,
+        optparse-applicative,
+        process
     hs-source-dirs:   exe
     default-language: Haskell2010
