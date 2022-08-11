@@ -50,6 +50,7 @@ withNewScope actionInScope = do
 
 -- instance Empty ProgramEnv where
 --   empty = ProgramEnv mempty mempty empty mempty
+newProgramEnv :: ProgramEnv
 newProgramEnv = ProgramEnv mempty mempty empty TC.newTypeTracker
 
 

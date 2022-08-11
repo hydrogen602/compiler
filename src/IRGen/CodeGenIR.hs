@@ -12,7 +12,6 @@ import qualified Data.Text.Lazy             as T
 import           LLVM.AST                   hiding (Function, FunctionType,
                                              Instruction)
 import qualified LLVM.AST.Constant          as C
-import           LLVM.AST.IntegerPredicate  (IntegerPredicate (NE))
 import qualified LLVM.AST.Type              as Types
 import qualified LLVM.IRBuilder             as Module
 import qualified LLVM.IRBuilder.Instruction as I
@@ -25,12 +24,13 @@ import           Core.Types                 (BinaryOp (..), Expr (..),
                                              Function (..), Program (..),
                                              Stmt (..))
 import           Extras.FixedAnnotated      (FixedAnnotated (getValue))
+import           Extras.Misc                (strictZip')
 import           IRGen.Basics
 import           IRGen.Lib
 import           IRGen.MixedFunctions       (addition, lessThan)
 import           IRGen.Types
 import           Types.Addon                (MaybeTyped (..), Typed (..),
-                                             isType, typeCheck, typeCheck',
+                                             typeCheck, typeCheck',
                                              typeCheckFunction)
 import qualified Types.Core                 as Ty
 
@@ -103,19 +103,16 @@ generateStmt = \case
     void $ fmap (Typed ret) $ I.call f $ map ((,[]) . getValue) params_ops
   IfStmt ex sts_then sts_else     -> mdo
     cond <- generateExpr ex
-    b <- if cond `isType` Ty.bool then
-        pure cond
-      else
-        Typed Ty.bool <$> I.icmp NE (getValue cond) (ConstantOperand $ C.Int 32 0)
+    b <- toBool cond
 
     Module.condBr (getValue b) then_block else_block
 
     then_block <- Module.block `Module.named` "then"
-    traverse_ generateStmt sts_then
+    withNewScope $ traverse_ generateStmt sts_then
     checkForExit $ Module.br merge_block
 
     else_block <- Module.block `Module.named` "else"
-    traverse_ generateStmt sts_else
+    withNewScope $ traverse_ generateStmt sts_else
     checkForExit $ Module.br merge_block
 
     merge_block <- Module.block `Module.named` "merge"
@@ -124,15 +121,12 @@ generateStmt = \case
     Module.br cond_block
     cond_block <- Module.block `Module.named` "while_condition"
     cond <- generateExpr ex
-    b <- if cond `isType` Ty.bool then
-        pure cond
-      else
-        Typed Ty.bool <$> I.icmp NE (getValue cond) (ConstantOperand $ C.Int 32 0)
+    b <- toBool cond
 
     Module.condBr (getValue b) while_body break_block
 
     while_body <- Module.block `Module.named` "while_body"
-    traverse_ generateStmt sts
+    withNewScope $ traverse_ generateStmt sts
     Module.br cond_block
 
     break_block <- Module.block `Module.named` "while_break"
@@ -152,7 +146,7 @@ generateFuncs (Function pos func_name params ret code _) = withPosition pos $ md
   ret_llvm_type <- lookupType $ type_ ret
 
   let
-    params_with_types = zip param_llvm_types $ map Module.ParameterName param_names
+    params_with_types = strictZip' param_llvm_types $ map Module.ParameterName param_names
 
     add_types = Typed (Ty.FunctionType param_types $ type_ ret)
 

@@ -1,6 +1,9 @@
 module IRGen.Basics where
 
-import           LLVM.AST                   (Name, Operand, mkName)
+import           LLVM.AST                   (Name, Operand (ConstantOperand),
+                                             mkName)
+import qualified LLVM.AST.Constant          as C
+import           LLVM.AST.IntegerPredicate  (IntegerPredicate (NE))
 import qualified LLVM.IRBuilder.Instruction as I
 
 import           Core.Classes               (Nameable (getName))
@@ -9,7 +12,9 @@ import           Extras.FixedAnnotated      (FixedAnnotated (getValue))
 import           IRGen.Types                (CodeGen, Mutability (..),
                                              Variable (Variable), addVariable,
                                              lookupType, lookupVariable)
-import           Types.Addon                (Typed (..))
+import           Types.Addon                (Typed (..), isType)
+import qualified Types.Core                 as Ty
+
 
 
 toLLVMName :: Nameable a => a -> Name
@@ -36,3 +41,10 @@ getVarValue name = do
     Variable Mutable typed ->
       sequenceA $ flip I.load 0 <$> typed
 
+
+toBool :: Typed Operand -> CodeGen (Typed Operand)
+toBool cond =
+  if cond `isType` Ty.bool then
+    pure cond
+  else
+    Typed Ty.bool <$> I.icmp NE (getValue cond) (ConstantOperand $ C.Int 32 0)
