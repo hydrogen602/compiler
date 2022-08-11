@@ -7,21 +7,18 @@ import           Control.Monad.State.Strict       (MonadState (get, put), State,
                                                    gets, modify)
 import           Data.Foldable                    (traverse_)
 import qualified Data.Map.Strict                  as Map
-import qualified Data.Text                        as T
 import qualified LLVM.AST                         as L
 import qualified LLVM.IRBuilder                   as Module
 
 import           Compat.Control.Monad.Error.Class (withError)
-import           Core.Classes                     (Empty (empty), Nameable (..))
-import           Core.CompileResult               (ErrorType (DuplicateNameError, DuplicateTypeError, ImmutableVariableError, UnknownFunctionError),
+import           Core.Classes                     (Empty (empty))
+import           Core.CompileResult               (ErrorType (DuplicateNameError, ImmutableVariableError, UnknownFunctionError),
                                                    ResultFailed (errFile, errLoc),
-                                                   ResultT, fromSuccess,
-                                                   throwError)
+                                                   ResultT, throwError)
 import           Core.Literals                    (ConstValue)
 import           Core.Types                       (FunctionName, LocalVariable)
 import           Extras.Position                  (Pos)
 import           Extras.PrettyShow                (PrettyShow (pshow))
-import           Extras.Scope                     (Scope (Scope))
 import qualified Extras.Scope                     as Scope
 import           LLVM.AST                         (Operand)
 import           Types.Addon                      (Typed (..))

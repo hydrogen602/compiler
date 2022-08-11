@@ -21,8 +21,9 @@ import           LLVM.Pretty                (ppllvm)
 
 import           Core.Classes               (Nameable (..))
 import           Core.CompileResult         (fromSuccess)
-import           Core.Types                 (Expr (..), Function (..), Op (..),
-                                             Program (..), Stmt (..))
+import           Core.Types                 (BinaryOp (..), Expr (..),
+                                             Function (..), Program (..),
+                                             Stmt (..))
 import           Extras.FixedAnnotated      (FixedAnnotated (getValue))
 import           IRGen.Basics
 import           IRGen.Lib

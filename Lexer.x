@@ -39,7 +39,9 @@ tokens :-
   \,                    { helper' Comma }
   \:                    { helper' Colon }
   \-\>                  { helper' RightArrow }
-  [\+\-\*\/\<\>]        { helper  (Sym . head) }
+  \-                    { helper' Minus }
+  [\+\*\/\<\>\%]        { helper  (Sym . fromCharToOp) }
+  \>\=|\<\=|\=\=|\!\=   { helper  (Sym . fromCharToOp) }
   $alpha [$alpha $digit \_]*		{ helper Var }
 
 {

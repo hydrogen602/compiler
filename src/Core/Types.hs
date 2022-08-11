@@ -4,16 +4,13 @@
 
 module Core.Types where
 
-import qualified Data.Map.Strict        as Map
-import           Data.Maybe             (fromMaybe, listToMaybe)
-import qualified Data.Set               as Set
+import qualified Data.Map.Strict   as Map
 
-import           Control.Monad.Identity (Identity)
-import           Core.Classes           (Empty (empty), Nameable (..))
+import           Core.Classes      (Empty (empty), Nameable (..))
 import           Core.Literals
-import           Extras.Position        (Pos)
-import           Extras.PrettyShow      (PrettyShow (..))
-import           Types.Addon            (Typed)
+import           Extras.Position   (Pos)
+import           Extras.PrettyShow (PrettyShow (..))
+import           Types.Addon       (Typed)
 
 
 newtype LocalVariable = LocalVariable {getLocalVariable :: String} deriving (Show, Eq, Ord) -- with type in the future
@@ -88,11 +85,23 @@ newProgram = Program mempty empty mempty
 data Expr f =
   Variabl LocalVariable |
   Immediate Int |
-  Expr Op (f (Expr f)) (f (Expr f)) |
+  Expr BinaryOp (f (Expr f)) (f (Expr f)) |
+  Unary UnaryOp (f (Expr f)) |
   FuncExpr FunctionName [f (Expr f)]
   -- deriving (Show, Eq, Ord)
 
-data Op =
+data BinaryOp =
     ADD
+  | SUB
+  | GREATER_THAN
+  | GREATER_THAN_EQUAL
   | LESS_THAN
+  | LESS_THAN_EQUAL
+  | EQUAL
+  | NOT_EQUAL
+  | DIV
+  | MOD
+  | PROD
   deriving (Show, Eq, Ord)
+
+data UnaryOp = NEG deriving (Show, Eq, Ord)

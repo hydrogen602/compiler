@@ -14,7 +14,6 @@ import Types.Addon
 import Types.Core
 import Extras.Position (Pos(Pos))
 
-
 }
 
 %name calc
@@ -45,15 +44,26 @@ import Extras.Position (Pos(Pos))
       '}'             { WithPosition _ RCurly }
       ','             { WithPosition _ Comma }
       ':'             { WithPosition _ Colon }
-      '-'             { WithPosition _ (Sym '-') }
-      '+'             { WithPosition _ (Sym '+') }
-      '<'             { WithPosition _ (Sym '<') }
 
-%right in
-%nonassoc '>' '<'
+      '-'             { WithPosition _ Minus }
+
+      '+'             { WithPosition _ (Sym (InnerOpSymBinary "+")) }
+      '<'             { WithPosition _ (Sym (InnerOpSymBinary "<")) }
+      '>'             { WithPosition _ (Sym (InnerOpSymBinary ">")) }
+      '*'             { WithPosition _ (Sym (InnerOpSymBinary "*")) }
+      '/'             { WithPosition _ (Sym (InnerOpSymBinary "/")) }
+      '%'             { WithPosition _ (Sym (InnerOpSymBinary "%")) }
+      gte             { WithPosition _ (Sym (InnerOpSymBinary ">=")) }
+      lte             { WithPosition _ (Sym (InnerOpSymBinary "<=")) }
+      eq              { WithPosition _ (Sym (InnerOpSymBinary "==")) }
+      neq             { WithPosition _ (Sym (InnerOpSymBinary "!=")) }
+
+
+%nonassoc '>' '<' gte lte eq neq
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' '%'
 %left NEG
+
 
 %%
 
@@ -103,7 +113,17 @@ ElseP   : else '{' Block '}'                       { $3 }
 
 Expr    :: { MaybeTyped (Expr MaybeTyped) }
         : Expr '+' Expr                            { noType (Expr ADD $1 $3) }
+        | Expr '-' Expr                            { noType (Expr SUB $1 $3) }
         | Expr '<' Expr                            { noType (Expr LESS_THAN $1 $3) }
+        | Expr '>' Expr                            { noType (Expr GREATER_THAN $1 $3) }
+        | Expr lte Expr                            { noType (Expr LESS_THAN_EQUAL $1 $3) }
+        | Expr gte Expr                            { noType (Expr GREATER_THAN_EQUAL $1 $3) }
+        | Expr eq Expr                             { noType (Expr EQUAL $1 $3) }
+        | Expr neq Expr                            { noType (Expr NOT_EQUAL $1 $3) }
+        | Expr '%' Expr                            { noType (Expr MOD $1 $3) }
+        | Expr '*' Expr                            { noType (Expr PROD $1 $3) }
+        | Expr '/' Expr                            { noType (Expr DIV $1 $3) }
+        | '-' Expr %prec NEG                       { noType (Unary NEG $2) }
         | Value                                    { noType ($1) }
         | var '(' Args ')'                         { noType (FuncExpr (FunctionName $1) $3) }
         | '(' Expr ')'                             { ($2) }
