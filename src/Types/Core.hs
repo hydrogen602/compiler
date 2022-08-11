@@ -3,18 +3,14 @@
 
 module Types.Core where
 
-import           Control.Arrow             ((&&&))
 import qualified Data.Map.Strict           as Map
 import           Data.String               (IsString (fromString))
 import qualified LLVM.AST.Type             as T
 
 import           Control.Monad.Error.Class (MonadError)
-import           Control.Monad.Identity    (Identity (runIdentity))
-import           Core.Classes              (Nameable (..))
 import           Core.CompileResult        (ErrorType (DuplicateTypeError, TypeError, UnknownTypeError),
-                                            ResultFailed, ResultT, fromSuccess,
-                                            throwError)
-import           Core.Util                 (dddot, ddot, quote)
+                                            ResultFailed, ResultT, throwError)
+import           Core.Util                 (quote)
 import           Data.List                 (intercalate)
 import           Extras.PrettyShow
 
@@ -44,11 +40,6 @@ getContainedTypes :: AType -> [AType]
 getContainedTypes (TypeName _)            = []
 getContainedTypes (FunctionType args ret) = args ++ [ret]
 
-
--- data ATypeClass = ATypeClass {
---   typeParams :: [AType],
---   classFunctions ::  -- ToDo
--- } deriving (Eq, Ord, Show)
 
 newtype TypeTracker = TypeTracker {
   getTypes :: Map.Map AType T.Type
@@ -102,13 +93,22 @@ get name tracker = maybe
 
 -- ToDo: Kinds - Pointers are * -> * as there can be a pointer of anything
 
+unit :: AType
 unit = TypeName "()"
+i32 :: AType
 i32 = TypeName "i32"
+i64 :: AType
 i64 = TypeName "i64"
+bool :: AType
 bool = TypeName "bool"
+i32Ptr :: AType
 i32Ptr = TypeName "*i32"
+i64Ptr :: AType
 i64Ptr = TypeName "*i64"
+boolPtr :: AType
 boolPtr = TypeName "*bool"
+arrayList :: AType
+arrayList = TypeName "list"
 
 builtinTypes :: TypeTracker
 builtinTypes = fromList [
@@ -118,7 +118,8 @@ builtinTypes = fromList [
   (bool, T.i1),
   (i32Ptr, T.ptr T.i32),
   (i64Ptr, T.ptr T.i64),
-  (boolPtr, T.ptr T.i1)
+  (boolPtr, T.ptr T.i1),
+  (arrayList, T.StructureType False [T.i32, T.i32, T.ptr T.i32])
   ]
 
 

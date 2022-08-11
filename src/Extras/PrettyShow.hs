@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Extras.PrettyShow where
-import           Data.List (intercalate, intersperse)
+import           Data.List (intercalate)
 import qualified Data.Set  as Set
 
 class PrettyShow a where

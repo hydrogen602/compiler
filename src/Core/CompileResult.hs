@@ -9,18 +9,14 @@ module Core.CompileResult where
 import           Control.Monad.Error.Class  (MonadError)
 import qualified Control.Monad.Error.Class  as MError
 import           Control.Monad.Identity     (Identity (Identity, runIdentity))
-import           Control.Monad.State        (State, StateT (StateT), evalState,
-                                             runState, runStateT, state,
+import           Control.Monad.State        (State, evalState, runState, state,
                                              withState)
-import qualified Control.Monad.State        as StateModule
-import           Control.Monad.State.Class  (MonadState (get, put), gets,
-                                             modify)
-import           Control.Monad.Trans        (MonadTrans (lift))
+import           Control.Monad.State.Class  (gets, modify)
 import           Control.Monad.Trans.Except
-import           Data.Bifunctor             (Bifunctor (first, second))
+import           Data.Bifunctor             (Bifunctor (second))
 import           Data.Functor               ((<&>))
 
-import           Core.Util                  (ddot, (<.>))
+import           Core.Util                  (ddot)
 import           Extras.Position            (Pos (Pos))
 import           Extras.PrettyShow          (PrettyShow (pshow))
 
@@ -32,14 +28,14 @@ data ResultFailed = ResultFailed {
   } deriving (Eq, Ord, Show)
 
 instance PrettyShow ResultFailed where
-  pshow ResultFailed{errFile=errFile, errLoc=errLoc, errType=errType, errMsg=errMsg} =
-    (case (errLoc, errFile) of
+  pshow ResultFailed{errFile=eFile, errLoc=eLoc, errType=eType, errMsg=eMsg} =
+    (case (eLoc, eFile) of
       (Nothing, Nothing)                 -> ""
       (Just loc, Nothing)                -> pshow loc
       (Nothing, Just file)               -> "(" ++ file ++ ") "
-      (Just (Pos lines cols), Just file) ->
-        "(" ++ file ++ ":" ++ show lines ++ ":" ++ show cols ++ ") "
-    ) ++ show errType ++ ": " ++ errMsg
+      (Just (Pos lns cols), Just file) ->
+        "(" ++ file ++ ":" ++ show lns ++ ":" ++ show cols ++ ") "
+    ) ++ show eType ++ ": " ++ eMsg
 
 
 type ResultT = ExceptT ResultFailed
@@ -65,7 +61,7 @@ throwError :: MonadError ResultFailed m => ErrorType -> String -> m a
 throwError = MError.throwError `ddot` ResultFailed Nothing Nothing
 
 throwShowError :: (MonadError ResultFailed m, PrettyShow b) => ErrorType -> b -> m a
-throwShowError errType = MError.throwError . ResultFailed Nothing Nothing errType . pshow
+throwShowError eType = MError.throwError . ResultFailed Nothing Nothing eType . pshow
 
 -- catchAll :: Applicative m => ResultT m a -> ResultT m (Maybe a)
 -- catchAll re = undefined -- catchE
@@ -119,9 +115,9 @@ withStateResultT f = ExceptT . withState f . runExceptT
 
 
 evalInner :: ResultT (State s) a -> s -> Result a
-evalInner result init = ExceptT $ Identity x
+evalInner result init_state = ExceptT $ Identity x
   where
-    x = evalState (runExceptT result) init
+    x = evalState (runExceptT result) init_state
 
 liftInner :: Result a -> ResultT (State s) a
 liftInner result = ExceptT $ pure r

@@ -5,8 +5,6 @@
 
 module Types.Addon where
 
-import qualified LLVM.AST                  as L
-
 import           Control.Arrow             (Arrow (first))
 import           Control.Monad.Error.Class (MonadError)
 import           Data.Foldable             (traverse_)
@@ -14,7 +12,9 @@ import           Data.Foldable             (traverse_)
 import           Core.CompileResult        (ErrorType (TypeError), ResultFailed,
                                             throwError)
 import           Extras.FixedAnnotated
+import           Extras.Misc               (strictZip)
 import           Extras.PrettyShow         (PrettyShow (pshow))
+import           LLVM.AST.Operand          (Operand)
 import           Types.Core
 
 
@@ -34,6 +34,9 @@ data Typed a = Typed {
   type_   :: AType,
   operand :: a
 } deriving (Show, Eq, Ord, Traversable)
+
+instance PrettyShow (Typed Operand) where
+  pshow (Typed ty _) = "operand: " ++ pshow ty
 
 instance FixedAnnotated Typed AType where
   getAnnotation = type_
@@ -61,10 +64,13 @@ typeCheck' maType typed = do
 
 -- returns the function + the return type
 typeCheckFunction :: MonadError ResultFailed m => Typed f -> [Typed a] -> m (Typed f)
-typeCheckFunction (Typed (FunctionType args ret) f) params = do
-  traverse_ (uncurry typeCheck) $ zip args params
+typeCheckFunction (Typed (FunctionType args ret) f) parameters = do
+  case strictZip args parameters of
+    Just zipped -> traverse_ (uncurry typeCheck) zipped
+    Nothing     -> throwError TypeError "Function argument count mismatch"
+
   pure $ Typed ret f
-typeCheckFunction (Typed ty _) params = throwError TypeError $ "Expected function, but got " ++ pshow ty
+typeCheckFunction (Typed ty _) _ = throwError TypeError $ "Expected function, but got " ++ pshow ty
 
 
 isCompatibleType :: MaybeTyped a -> AType -> Bool

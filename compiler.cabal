@@ -24,6 +24,8 @@ extra-source-files:
     README.md
 
 library
+    ghc-options: 
+        -j4 -Wall
     build-depends:
         base,
         array,
@@ -42,9 +44,11 @@ library
         Extras.Scope
         Extras.PrettyShow
         Extras.Position
+        Extras.Misc
         IRGen.Basics
         IRGen.Types
         IRGen.MixedFunctions
+        IRGen.Lib
         Types.Addon
         Types.Core
         Compat.Control.Monad.Error.Class

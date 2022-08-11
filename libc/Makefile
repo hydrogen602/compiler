@@ -1,6 +1,6 @@
 # C Flags
 CPPFLAGS = -Wall -pedantic
-CC = gcc
+CC = clang
 LDLIBS = -lm
 
 # Env
@@ -11,10 +11,13 @@ SHELL := env PATH=$(PATH) /bin/bash
 SRCS := $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 
-.PHONY: clean xclean
+.PHONY: clean xclean symbols
 
 libc.a: ${OBJS}
 	llvm-ar r libc.a ${OBJS}
+
+symbols:
+	llvm-nm libc.a
 
 $(objects): %.o: %.c
 

@@ -1,8 +1,6 @@
 module IRGen.Basics where
 
-import           LLVM.AST                   (Name, Operand (LocalReference),
-                                             mkName)
-import qualified LLVM.AST.Type              as Types
+import           LLVM.AST                   (Name, Operand, mkName)
 import qualified LLVM.IRBuilder.Instruction as I
 
 import           Core.Classes               (Nameable (getName))

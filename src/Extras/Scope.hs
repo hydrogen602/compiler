@@ -3,7 +3,6 @@
 module Extras.Scope where
 
 import qualified Data.Map.Strict           as Map
-import           Prelude                   hiding (fromMaybe)
 
 import           Control.Monad.Error.Class (MonadError)
 import           Core.Classes              (Empty (..))
