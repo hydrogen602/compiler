@@ -1,11 +1,11 @@
 let x = -5
 if x + 5 {
-  println 1
+  println(1)
 }
 if x + 7 {
-  println 2
+  println(2)
 }
 if 5 + x {
-  println 3
+  println(3)
 }
-println x
+println(x)

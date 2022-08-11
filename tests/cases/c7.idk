@@ -1,11 +1,11 @@
 let c = 1
 if c + -2 {
-  println 1
+  println(1)
   if 1 + c {
-    println 2
+    println(2)
   }
 }
 if c {
-  println 3
+  println(3)
 }
-println c
+println(c)

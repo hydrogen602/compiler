@@ -1,5 +1,5 @@
 let x = -3 + 2
 let y = x + 1
 if y {
-  print y
+  print(y)
 }

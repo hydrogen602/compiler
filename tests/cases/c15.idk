@@ -17,10 +17,8 @@ def fib(n) {
 let n = 0
 while n < 17 {
     let result = fib(n)
-    print "fib("
-    print n
-    print ") = "
-    println result
+    print(n)
+    println(result)
 
     n = n + 1
 }
