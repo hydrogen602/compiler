@@ -62,7 +62,7 @@ mainOpts opts@(Options inFile rawOutFile emitIR emitObj  clangPath) = do
       ("", OBJ) -> "out.o"
       (s, _)    -> s
 
-  fileContent <- (++"\n") <$> readFile inFile
+  fileContent <- (++"\nreturn 0\n\n") <$> readFile inFile
   let -- config output
     ast = parser fileContent
     program = astToProgram inFile ast
@@ -75,11 +75,11 @@ mainOpts opts@(Options inFile rawOutFile emitIR emitObj  clangPath) = do
 
 compileToObj :: FilePath -> T.Text -> FilePath -> IO ()
 compileToObj clangPath text file =
-  runCommandWithInput clangPath text ["-c", "-o", file, "-x", "ir", "-"]
+  runCommandWithInput clangPath text ["-Wno-override-module", "-c", "-o", file, "-x", "ir", "-"]
 
 compileToExe :: FilePath -> T.Text -> FilePath -> IO ()
 compileToExe clangPath text file =
-  runCommandWithInput clangPath text ["-o", file, "libc/libc.a", "-x", "ir", "-"]
+  runCommandWithInput clangPath text ["-Wno-override-module", "-o", file, "libc/libc.a", "-x", "ir", "-"]
 
 runCommandWithInput :: FilePath -> T.Text -> [String] -> IO ()
 runCommandWithInput command text args = do

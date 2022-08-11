@@ -100,8 +100,7 @@ generateStmt = \case
 
     params_ops <- traverse generateExpr exs
     (Typed ret f) <- typeCheckFunction func params_ops
-    fmap (Typed ret) $ I.call f $ map ((,[]) . getValue) params_ops
-    pure ()
+    void $ fmap (Typed ret) $ I.call f $ map ((,[]) . getValue) params_ops
   IfStmt ex sts_then sts_else     -> mdo
     cond <- generateExpr ex
     b <- if cond `isType` Ty.bool then
