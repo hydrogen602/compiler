@@ -1,8 +1,7 @@
-const hi = "Hello World!"
 
 def f(a) {
-    let doubleA = a + a
-    print "2a = "
+    let doubleA = a + (a + 1)
+    print "2a + 1 = "
     println doubleA
     println a
     return doubleA
@@ -13,7 +12,9 @@ let c = 10
 if c < 5 {}
 println c
 
-println hi
+println "Hello World!"
+
+println c
 
 let x = 42
 c = f(x)

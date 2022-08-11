@@ -12,3 +12,5 @@ Print
 ```
 print x
 ```
+
+Return outside a function is allowed - this 'returns' from the script, i.e. sys exit

@@ -1,7 +1,7 @@
 let c = 1
 if -1 + c {
   if c {
-    println 5
+    println(5)
   }
 }
-println c + -5
+println(c + -5)

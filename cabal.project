@@ -1,0 +1,6 @@
+
+extra-prog-path:
+  /opt/homebrew/opt/llvm@11/bin
+packages: compiler.cabal
+
+jobs: 4

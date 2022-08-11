@@ -6,7 +6,13 @@ Main
 Lexer.hs
 Grammar.hs
 out*
+build
+*.log
+dist-newstyle
+libc/libc.a
+a.out
 
 # Test stuff
 tests/tmp.s
 **/__pycache__
+

@@ -1,14 +1,14 @@
 let c = 1
 if c {
-  println 1
+  println(1)
 }
 else {
-  println 2
+  println(2)
 }
 
 if c + -1 {
-  println 3
+  println(3)
 }
 else {
-  println 4
+  println(4)
 }

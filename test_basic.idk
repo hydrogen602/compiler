@@ -1,0 +1,35 @@
+
+def f(x: i32) -> i32 {
+  return x + 3
+}
+
+let c = 20
+
+if 100 < c {
+  println(c)
+}
+else {
+  println(c)
+  println(c)
+}
+
+let mut x = 5
+let y = 1
+
+println(f(y))
+
+let ls = newArrayList()
+while 0 < x {
+  x = x + (-1)
+  append(ls,x)
+  print(x)
+}
+
+println(len(ls))
+println(len(ls))
+
+while 0 < len(ls) {
+  print(pop(ls))
+}
+
+return 0
