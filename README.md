@@ -4,9 +4,13 @@
 
 ~~A few examples of the language can be found in `fib.idk`, `fibR.idk`, `test.idk`, and `test.old.idk`.~~
 
+
 This project used to be focused on generating MIPS code, but now I've transitioned to trying to use LLVM to simplify things.
 
+Currently the language features functions, recursion, if, else, and while statements. The only type currently supported is integers.
+
 ## How to run
+
 
 Run `make` to compile & run the compiler, compile and link the `.idk` file and run it.
 <!-- 
