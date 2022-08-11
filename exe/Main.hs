@@ -19,18 +19,21 @@ import           IRGen.CodeGenIR        (generate)
 
 
 data Options = Options {
-  inFile  :: String,
-  outFile :: String,
-  irOnly  :: Bool,
-  llcPath :: String
+  inFile    :: String,
+  outFile   :: String,
+  emitIR    :: Bool,
+  emitObj   :: Bool,
+  clangPath :: String
   }
+
 
 options :: Parser Options
 options = Options
   <$> strOption (long "input" <> short 'i' <> metavar "INPUT_FILE" <> help "File to compile" )
   <*> strOption (long "output" <> short 'o' <> value "" <> metavar "OUTPUT_FILE" <> help "Output file" )
-  <*> switch (short 'c' <> help "Emit LLVM IR")
-  <*> strOption (long "llc-path" <> value "llc" <> metavar "LLC_PATH" <> help "Path to llc")
+  <*> switch    (long "emit-llvm" <> help "Emit LLVM IR")
+  <*> switch    (short 'c' <> help "Emit Object files")
+  <*> strOption (long "clang-path" <> value "clang" <> metavar "CLANG_PATH" <> help "Path to clang")
 
 main :: IO ()
 main = execParser with_info >>= mainOpts
@@ -40,12 +43,24 @@ main = execParser with_info >>= mainOpts
       <> progDesc "Compile a file into LLVM IR"
       <> header "Compiler" )
 
+data Emit = IR | OBJ | EXE deriving (Show, Eq, Ord)
+getEmit :: Options -> Emit
+getEmit Options{emitIR=ir, emitObj=obj} = case (ir, obj) of
+  (False, False) -> EXE
+  (True, False)  -> IR
+  (False, True)  -> OBJ
+  (True, True)   -> IR -- idk
+
+
 mainOpts :: Options -> IO ()
-mainOpts (Options inFile rawOutFile irOnly llcPath) = do
-  let outFile = case (rawOutFile, irOnly) of
-        ("", True)  -> "out.ll"
-        ("", False) -> "out.o"
-        (s, _)      -> s
+mainOpts opts@(Options inFile rawOutFile emitIR emitObj  clangPath) = do
+  let
+    emitter = getEmit opts
+    outFile = case (rawOutFile, emitter) of
+      ("", EXE) -> "a.out"
+      ("", IR)  -> "out.ll"
+      ("", OBJ) -> "out.o"
+      (s, _)    -> s
 
   fileContent <- (++"\n") <$> readFile inFile
   let -- config output
@@ -53,23 +68,31 @@ mainOpts (Options inFile rawOutFile irOnly llcPath) = do
     program = astToProgram inFile ast
     !ir = generate program  -- throw errors out here?
 
-  if irOnly then
-    TIO.writeFile outFile ir
-  else
-    compileIR llcPath ir outFile
+  case emitter of
+    IR  -> TIO.writeFile outFile ir
+    OBJ -> compileToObj clangPath ir outFile
+    EXE -> compileToExe clangPath ir outFile
 
-compileIR :: FilePath -> T.Text -> FilePath -> IO ()
-compileIR llcPath text file = do
-  let pConfig = (proc llcPath ["-o", file, "-filetype=obj"]){std_in=CreatePipe}
+compileToObj :: FilePath -> T.Text -> FilePath -> IO ()
+compileToObj clangPath text file =
+  runCommandWithInput clangPath text ["-c", "-o", file, "-x", "ir", "-"]
+
+compileToExe :: FilePath -> T.Text -> FilePath -> IO ()
+compileToExe clangPath text file =
+  runCommandWithInput clangPath text ["-o", file, "libc/libc.a", "-x", "ir", "-"]
+
+runCommandWithInput :: FilePath -> T.Text -> [String] -> IO ()
+runCommandWithInput command text args = do
+  let pConfig = (proc command args){std_in=CreatePipe}
 
   (stdin, stdout, stderr, process) <- createProcess pConfig
   case stdin of
-    Nothing -> error "Created Process didn't return a stdin handle"
+    Nothing -> error "Internal Error: Created process didn't return a stdin handle"
     Just h -> do
       TIO.hPutStrLn h text
       hClose h
-
   result <- waitForProcess process
   case result of
     ExitSuccess   -> pure ()
-    ExitFailure n -> error "llc failed to compile IR to object file"
+    ExitFailure n -> error "clang compilation failed"
+
