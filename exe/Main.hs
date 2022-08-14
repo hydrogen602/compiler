@@ -62,7 +62,7 @@ mainOpts opts@(Options inFile rawOutFile emitIR emitObj  clangPath) = do
       ("", OBJ) -> "out.o"
       (s, _)    -> s
 
-  fileContent <- (++"\nreturn 0\n\n") <$> readFile inFile
+  fileContent <- (++"\n") <$> readFile inFile
   let -- config output
     ast = parser fileContent
     program = astToProgram inFile ast

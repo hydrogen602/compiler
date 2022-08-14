@@ -15,7 +15,7 @@ def fib(n: i32) -> i32 {
 }
 
 let mut n = 0
-while n < 17 {
+while n < 13 {
     let result = fib(n)
     print(n)
     println(result)

@@ -22,7 +22,7 @@ def case_helper(test):
 
     args = ['cabal', 'run', 'compiler', '--', '-i',
             f'{pathToCase}.idk', '-o', f'tests/out/{test}']
-    compileResult = subprocess.run(args, capture_output=True)
+    compileResult = subprocess.run(args, capture_output=True, timeout=120)
 
     if test.startswith('fail'):
         assert compileResult.returncode != 0  # invalid code should fail
@@ -36,7 +36,7 @@ def case_helper(test):
         compileResult.check_returncode()
 
         result = subprocess.run(
-            [f'tests/out/{test}'], capture_output=True)
+            [f'tests/out/{test}'], capture_output=True, timeout=30)
         result.check_returncode()
 
         output = result.stdout.decode()

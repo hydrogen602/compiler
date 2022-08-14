@@ -48,6 +48,8 @@ library
         IRGen.Basics
         IRGen.Types
         IRGen.MixedFunctions
+        IRGen.FunctionGen
+        IRGen.StatementGen
         IRGen.Lib
         Types.Addon
         Types.Core

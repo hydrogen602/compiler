@@ -88,9 +88,9 @@ lookupFunction name = do
 
 
 addFunction :: (MonadState ProgramEnv m, MonadError ResultFailed m) => FunctionName -> Typed Operand -> m ()
-addFunction func_name typed@(Typed type_ _) = do
+addFunction func_name typed = do
   type_tracker <- gets types
-  let all_types_in_func = TC.getContainedTypes type_
+  let all_types_in_func = TC.getContainedTypes $ type_ typed
   traverse_ (`TC.requireType` type_tracker) all_types_in_func
 
   program <- get
