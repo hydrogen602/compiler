@@ -22,3 +22,7 @@ To run the generated MIPS assembly, I've used the MIPS32 simulator `spim`. Use `
 
 To run the automatic tests, run `pytest`. (This requires `python3` and `pytest`).
  -->
+
+## ToDo List
+
+- [ ] Enums on the heap

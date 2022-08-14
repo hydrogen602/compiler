@@ -29,7 +29,7 @@ generate = ppllvm . generateModule
 
 
 generateModule :: Program MaybeTyped -> Module
-generateModule (Program func_mapping _ code' file) = evalState (fromSuccess m) newProgramEnv
+generateModule (Program func_mapping _ code' file) = evalState (fromSuccess result) newProgramEnv
   where
     funcs' :: LLVM ()
     funcs' = generateAllFunctions $ Map.elems func_mapping
@@ -44,4 +44,4 @@ generateModule (Program func_mapping _ code' file) = evalState (fromSuccess m) n
       funcs'
       main
 
-    m = withFile file $ Module.buildModuleT "main" code_state
+    result = withFile file $ Module.buildModuleT "main" code_state

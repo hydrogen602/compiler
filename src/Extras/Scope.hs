@@ -20,10 +20,10 @@ data Scope k v = Scope {
 instance Ord k => Empty (Scope k v) where
   empty = Scope mempty Nothing
 
-(!) :: Ord k => Scope k v -> k -> v
-scope ! key = case scope !? key of
-  Nothing -> error "Cannot find key"
-  Just sc -> sc
+-- (!) :: Ord k => Scope k v -> k -> v
+-- scope ! key = case scope !? key of
+--   Nothing -> error "Cannot find key"
+--   Just sc -> sc
 
 (!?) :: Ord k => Scope k v -> k -> Maybe v
 (Scope vals maybe_parent) !? key = firstJust (vals Map.!? key) $ maybe_parent >>= (!? key)

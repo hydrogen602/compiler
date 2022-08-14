@@ -1,5 +1,7 @@
+{-# LANGUAGE LambdaCase #-}
 module IRGen.Basics where
 
+import           Data.Functor               (($>))
 import           LLVM.AST                   (Name, Operand (ConstantOperand),
                                              mkName)
 import qualified LLVM.AST.Constant          as C
@@ -22,9 +24,8 @@ toLLVMName = mkName . getName
 
 
 makeNewVar :: Mutability -> Typed Operand -> LocalVariable -> CodeGen (Typed Operand)
-makeNewVar Frozen var lv = do
-  addVariable lv (Variable Frozen var)
-  pure var
+makeNewVar Frozen var lv =
+  addVariable lv (Variable Frozen var) $> var
 makeNewVar Mutable (Typed ty op) lv = do
   llvmType <- lookupType ty
   var <- Typed ty <$> I.alloca llvmType Nothing 0
@@ -34,12 +35,9 @@ makeNewVar Mutable (Typed ty op) lv = do
 
 
 getVarValue :: LocalVariable -> CodeGen (Typed Operand)
-getVarValue name = do
-  var <- lookupVariable name
-  case var of
-    Variable Frozen typed -> pure typed
-    Variable Mutable typed ->
-      sequenceA $ flip I.load 0 <$> typed
+getVarValue name = lookupVariable name >>= \case
+    Variable Frozen typed  -> pure typed
+    Variable Mutable typed -> sequenceA $ flip I.load 0 <$> typed
 
 
 toBool :: Typed Operand -> CodeGen (Typed Operand)

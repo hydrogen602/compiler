@@ -14,5 +14,6 @@ strictZip [] []             = Just []
 strictZip (e1:ls1) (e2:ls2) = ((e1,e2):) <$> strictZip ls1 ls2
 strictZip _ _               = Nothing
 
+-- FIXME: use MonadError instead of partial function
 strictZip' :: [a] -> [b] -> [(a,b)]
 strictZip' = fromMaybe (error "Internal Error: strictZip'") `ddot` strictZip

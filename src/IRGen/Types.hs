@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase       #-}
 
 module IRGen.Types where
 
@@ -76,15 +77,15 @@ lookupVariableMutable name = do
   var <- scope Scope.!! name
   case var of
     Variable Mutable ty -> pure ty
-    Variable Frozen ty  -> throwError ImmutableVariableError $ pshow name
+    Variable Frozen  _  -> throwError ImmutableVariableError $ pshow name
 
 
 lookupFunction :: (MonadState ProgramEnv m, MonadError ResultFailed m) => FunctionName -> m (Typed Operand)
-lookupFunction name = do
-  funcMapping <- gets funcs
-  case Map.lookup name funcMapping of
+lookupFunction name =
+  gets funcs >>= (\case
     Nothing -> throwError UnknownFunctionError $ pshow name
     Just ty -> pure ty
+    ) . Map.lookup name
 
 
 addFunction :: (MonadState ProgramEnv m, MonadError ResultFailed m) => FunctionName -> Typed Operand -> m ()
@@ -107,7 +108,8 @@ addVariable var_name op = do
   put $ program{locals=new_locals}
 
 
-type LLVM = Module.ModuleBuilderT (ResultT (State ProgramEnv))
+type StateResult = ResultT (State ProgramEnv)
+type LLVM = Module.ModuleBuilderT StateResult
 type CodeGen = Module.IRBuilderT LLVM
 
 

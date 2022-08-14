@@ -10,7 +10,6 @@ if 100 < c {
 }
 else {
   println(c)
-  println(c)
 }
 
 let mut x = 5
@@ -25,7 +24,6 @@ while 0 < x {
   print(x)
 }
 
-println(len(ls))
 println(len(ls))
 
 while 0 < len(ls) {

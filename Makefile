@@ -20,15 +20,10 @@ EXE_NAME = ${BUILD_DIR}/main
 run: ${EXE_NAME}
 	@./${EXE_NAME}
 
-# out.ll: ${SRCS} ${GENERATED}
-# 	cabal run exe:compiler -- -i test_basic.idk -o out.ll -c
+# Note: changing code to produce an executable and then trying to link it is dumb
 
-${BUILD_DIR}/out.o: ${SRCS} ${GENERATED} test_basic.idk
+${EXE_NAME}: ${SRCS} ${GENERATED} ${LIB} test_basic.idk
 	cabal run exe:compiler -- -i test_basic.idk -o $@
-
-${EXE_NAME}: ${BUILD_DIR}/out.o ${LIB}
-	clang ${BUILD_DIR}/out.o ${LIB} -o $@
-
 
 # Haskell building & other setup
 
@@ -49,6 +44,7 @@ src/Grammar.hs: Grammar.y src/Token.hs src/Lexer.hs
 clean:
 	cabal clean
 	rm -f *.ll *.o
+	rm -f build/*
 	$(MAKE) -C libc clean
 
 xclean: clean

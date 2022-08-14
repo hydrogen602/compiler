@@ -30,7 +30,9 @@ import qualified Types.Core                 as Ty
 
 
 generateExpr :: MaybeTyped (Expr MaybeTyped) -> CodeGen (Typed Operand)
-generateExpr (MaybeTyped maybeExprTy expr) = typeCheck' maybeExprTy $ helper expr
+generateExpr (MaybeTyped maybeExprTy expr) = do
+  expr_operand <- helper expr
+  typeCheck' maybeExprTy expr_operand
   where
     helper :: Expr MaybeTyped -> CodeGen (Typed Operand)
     helper (Variabl name)         = getVarValue name
@@ -41,7 +43,7 @@ generateExpr (MaybeTyped maybeExprTy expr) = typeCheck' maybeExprTy $ helper exp
         f = case op of
           ADD       -> addition
           LESS_THAN -> lessThan
-          _         -> undefined
+          _         -> undefined -- FIXME: implement other operators
 
       asOperand1 <- generateExpr e1
       asOperand2 <- generateExpr e2
@@ -53,30 +55,28 @@ generateExpr (MaybeTyped maybeExprTy expr) = typeCheck' maybeExprTy $ helper exp
       (Typed ret f) <- typeCheckFunction func params_ops
 
       fmap (Typed ret) $ I.call f $ map ((,[]) . getValue) params_ops
-    helper _ = undefined
-
+    helper _ = undefined -- FIXME: implement negation
 
 generateStmt :: Stmt MaybeTyped -> CodeGen ()
 generateStmt = \case
-  LetMutStmt pos lv ex          -> withPosition pos $ do
+  LetMutStmt pos lv ex        -> withPosition pos $ do
     val <- generateExpr ex
     -- see https://llvm.org/docs/LangRef.html#store-instruction
     void $ makeNewVar Mutable val lv
-  LetStmt pos lv ex          -> withPosition pos $ do
+  LetStmt pos lv ex           -> withPosition pos $ do
     val <- generateExpr ex
     void $ makeNewVar Frozen val lv
-  AssignStmt pos lv ex       -> withPosition pos $ do
+  AssignStmt pos lv ex        -> withPosition pos $ do
     var <- lookupVariableMutable lv
     pre_val <- generateExpr ex
     val <- typeCheck (type_ var) pre_val
     I.store (getValue var) 0 (getValue val)
   FuncCall f_name exs        -> do
     func <- lookupFunction f_name
-
     params_ops <- traverse generateExpr exs
-    (Typed ret f) <- typeCheckFunction func params_ops
-    void $ fmap (Typed ret) $ I.call f $ map ((,[]) . getValue) params_ops
-  IfStmt ex sts_then sts_else     -> mdo
+    (Typed _ f) <- typeCheckFunction func params_ops
+    void $ I.call f $ map ((,[]) . getValue) params_ops
+  IfStmt ex sts_then sts_else -> mdo
     cond <- generateExpr ex
     b <- toBool cond
 

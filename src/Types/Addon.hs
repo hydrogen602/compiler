@@ -25,6 +25,11 @@ data MaybeTyped a = MaybeTyped {
   operand' :: a
 } deriving (Show, Eq, Ord, Traversable)
 
+instance PrettyShow (MaybeTyped Operand) where
+  pshow (MaybeTyped (Just ty) _) = "operand: " ++ pshow ty
+  pshow (MaybeTyped Nothing _)   = "operand: ?"
+
+
 instance FixedAnnotated MaybeTyped (Maybe AType) where
   getAnnotation = type_'
   getValue = operand'
@@ -51,16 +56,19 @@ typeCheck aType typed
   | aType == type_ typed = pure typed
   | otherwise = throwTypeError aType $ type_ typed
 
-typeCheck' :: MonadError ResultFailed m => Maybe AType -> m (Typed a) -> m (Typed a)
-typeCheck' maType typed = do
-  ty <- getAnnotation <$> typed
-  case maType of
-    Nothing -> typed
-    Just aType ->
-      if aType == ty then
-        typed
-      else
-        throwTypeError aType ty
+-- | type check
+-- Note: be careful when passing in a monadic values as an argument
+-- it is easy to apply the action twice.
+-- A line like:
+--    ty <- getAnnotation <$> typed
+-- Will apply all monadic action/state changes
+typeCheck' :: MonadError ResultFailed m => Maybe AType -> Typed a -> m (Typed a)
+typeCheck' Nothing typed = pure typed
+typeCheck' (Just aType) typed
+  | aType == ty = pure typed
+  | otherwise   = throwTypeError aType ty
+  where
+    ty = getAnnotation typed
 
 -- returns the function + the return type
 typeCheckFunction :: MonadError ResultFailed m => Typed f -> [Typed a] -> m (Typed f)

@@ -1,8 +1,8 @@
 module Core.Util where
 
 import           Control.Monad.State
-import           Data.List
 
+-- FIXME: remove partial function
 unpackLs1 :: [a] -> a
 unpackLs1 [x] = x
 unpackLs1 _   = error "Expected one element in list"
@@ -15,7 +15,7 @@ argumentExtract name (e:arg:args)
     | otherwise = argumentExtract name args
 
 removeLastOf3Tup :: (a, b, c) -> (a, b)
-removeLastOf3Tup (a, b, c) = (a, b)
+removeLastOf3Tup (a, b, _) = (a, b)
 
 putAndReturn :: MonadState s m => s -> b -> m b
 putAndReturn st re = put st >> return re

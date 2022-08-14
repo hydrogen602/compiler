@@ -17,7 +17,7 @@ addition (Typed ta a) (Typed tb b)
   | otherwise                    = throwError TypeError $ "Addition not supported for types" ++ pshow ta ++ " and " ++ pshow tb
 
 lessThan :: Typed Operand -> Typed Operand -> CodeGen (Typed Operand)
-lessThan (Typed ta a) (Typed tb b)
+lessThan (Typed ta a) (Typed tb b) -- FIXME: this should return type bool
   | ta == Ty.i32 && tb == Ty.i32 = Typed Ty.i32 <$> I.icmp SLT a b
   | ta == Ty.i64 && tb == Ty.i64 = Typed Ty.i64 <$> I.icmp SLT a b
   | otherwise                    = throwError TypeError $ "Less than not supported for types" ++ pshow ta ++ " and " ++ pshow tb
