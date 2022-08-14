@@ -1,4 +1,5 @@
 -- Print out the fibonacci numbers
+-- This code is currently invalid
 let a = 0
 let b = 1
 let n = 1000

@@ -1,0 +1,20 @@
+
+def fibR(n: i32) -> i32 {
+    let mut out = 0
+    if 0 < n {
+        out = 1
+
+        if 1 < n {
+            out = fibR(n + -1) + fibR(n + -2)
+        }
+    }
+    return out
+}
+
+let mut n = 30
+while n < 40 {
+    println(n)
+    println(fibR(n))
+
+    n = n + 1
+}

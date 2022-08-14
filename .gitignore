@@ -15,4 +15,6 @@ a.out
 # Test stuff
 tests/tmp.s
 **/__pycache__
-
+comparison/*.out
+comparison/fibR
+comparison/fibR_c
