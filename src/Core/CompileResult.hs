@@ -79,7 +79,7 @@ toTransformer = mapExceptT (pure . runIdentity)
 fromMaybeResult :: Monad m => ResultT m a -> ResultT m (Maybe a) -> ResultT m a
 fromMaybeResult throwable = (>>= maybe throwable pure)
 
-fromMaybe :: Monad m => ResultT m a -> Maybe a -> ResultT m a
+fromMaybe :: MonadError ResultFailed m => m a -> Maybe a -> m a
 fromMaybe throwable = maybe throwable pure
 
 mapInnerMonad :: (m1 (Either ResultFailed a) -> m2 (Either ResultFailed b)) -> ResultT m1 a -> ResultT m2 b

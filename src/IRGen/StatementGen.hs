@@ -5,7 +5,8 @@
 
 module IRGen.StatementGen where
 
-import           Control.Monad              (unless, void)
+import           Control.Applicative        (Alternative ((<|>)))
+import           Control.Monad              (join, unless, void)
 import           LLVM.AST                   hiding (Function, FunctionType,
                                              Instruction)
 import qualified LLVM.AST.Constant          as C
@@ -13,11 +14,14 @@ import qualified LLVM.IRBuilder             as Module
 import qualified LLVM.IRBuilder.Instruction as I
 import           LLVM.Prelude               (sequenceA_, traverse_)
 
-import           Core.Types                 (BinaryOp (..), Expr (..),
-                                             Stmt (..))
+import           Core.CompileResult         (ErrorType (UnexpectedError),
+                                             throwError)
+import qualified Core.CompileResult         as Result
+import           Core.Types                 (Expr (..), Stmt (..))
 import           Extras.FixedAnnotated      (FixedAnnotated (getValue))
 import           IRGen.Basics               (getVarValue, makeNewVar, toBool)
-import           IRGen.MixedFunctions       (addition, lessThan)
+import           IRGen.MixedFunctions       (tryMatchArithmetic,
+                                             tryMatchComparison)
 import           IRGen.Types                (CodeGen,
                                              Mutability (Frozen, Mutable),
                                              lookupFunction,
@@ -38,16 +42,12 @@ generateExpr (MaybeTyped maybeExprTy expr) = do
     helper (Variabl name)         = getVarValue name
     helper (Immediate n)          =
       pure $ Typed Ty.i32 $ ConstantOperand $ C.Int 32 (fromIntegral n)
-    helper (Expr op e1 e2)        = do
-      let
-        f = case op of
-          ADD       -> addition
-          LESS_THAN -> lessThan
-          _         -> undefined -- FIXME: implement other operators
-
-      asOperand1 <- generateExpr e1
-      asOperand2 <- generateExpr e2
-      f asOperand1 asOperand2
+    helper (Expr op e1 e2)        = join $ f <*> asOperand1 <*> asOperand2
+      where
+        err = throwError UnexpectedError $ "Binary Operand not found: " <> show op
+        f = Result.fromMaybe err $ tryMatchArithmetic op <|> tryMatchComparison op
+        asOperand1 = generateExpr e1
+        asOperand2 = generateExpr e2
 
     helper (FuncExpr f_name parameters) = do
       func <- lookupFunction f_name

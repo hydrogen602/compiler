@@ -2,6 +2,11 @@ import pytest
 import subprocess
 import sys
 import os
+import shutil
+
+cabal = shutil.which('cabal')
+if cabal is None:
+    assert False, "VS Code is being a pain"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -20,7 +25,7 @@ cases = set(t[:t.index('.')]
 def case_helper(test):
     pathToCase = os.path.join(casesPath, test)
 
-    args = ['cabal', 'run', 'compiler', '--', '-i',
+    args = [cabal, 'run', 'compiler', '--', '-i',
             f'{pathToCase}.idk', '-o', f'tests/out/{test}']
     compileResult = subprocess.run(args, capture_output=True, timeout=120)
 
