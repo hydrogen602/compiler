@@ -21,10 +21,10 @@ tokens :-
   mut                   { helper' Mut }
   const                 { helper' Const }
   if                    { helper' If }
-  \n*else$aw*           { helper' Else }
+  $aw*else$aw*           { helper' Else }
   while                 { helper' While }
   def                   { helper' Def }
-  "-"?$digit+				    { helper  (Integer . read) }
+  $digit+				        { helper  (Integer . read) }
   true                  { helper' (Integer 1) }
   false                 { helper' (Integer 0) }
   return                { helper' Return }
@@ -61,8 +61,6 @@ helper' :: Token -> AlexPosn -> String -> WithPosition
 helper' tok pos _ = WithPosition pos tok
 
 -- Each action has type :: String -> Token
-
--- let n = 0 where n \in Zahlen with (-\inf, 5]U(7,9)
 
 strHelper :: String -> Token
 strHelper ('\"':sTmp) = 

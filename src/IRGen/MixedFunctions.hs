@@ -1,6 +1,7 @@
 module IRGen.MixedFunctions where
 
-import           LLVM.AST                   (Operand)
+import           LLVM.AST                   (Operand (ConstantOperand))
+import qualified LLVM.AST.Constant          as C
 import qualified LLVM.IRBuilder.Instruction as I
 import           Prelude                    hiding (EQ)
 
@@ -17,6 +18,18 @@ addition (Typed ta a) (Typed tb b)
   | ta == Ty.i32 && tb == Ty.i32 = Typed Ty.i32 <$> I.add a b
   | ta == Ty.i64 && tb == Ty.i64 = Typed Ty.i64 <$> I.add a b
   | otherwise                    = throwError TypeError $ "Addition not supported for types" ++ pshow ta ++ " and " ++ pshow tb
+
+subtraction :: Typed Operand -> Typed Operand -> CodeGen (Typed Operand)
+subtraction (Typed ta a) (Typed tb b)
+  | ta == Ty.i32 && tb == Ty.i32 = Typed Ty.i32 <$> I.sub a b
+  | ta == Ty.i64 && tb == Ty.i64 = Typed Ty.i64 <$> I.sub a b
+  | otherwise                    = throwError TypeError $ "Subtraction not supported for types" ++ pshow ta ++ " and " ++ pshow tb
+
+negation :: Typed Operand -> CodeGen (Typed Operand)
+negation (Typed ta a)
+  | ta == Ty.i32 = Typed Ty.i32 <$> I.sub (ConstantOperand $ C.Int 32 0) a
+  | ta == Ty.i64 = Typed Ty.i64 <$> I.sub (ConstantOperand $ C.Int 64 0) a
+  | otherwise                    = throwError TypeError $ "Negation not supported for type" ++ pshow ta
 
 lessThan :: Typed Operand -> Typed Operand -> CodeGen (Typed Operand)
 lessThan = compareOp SLT
@@ -55,4 +68,5 @@ tryMatchComparison _                  = Nothing
 
 tryMatchArithmetic :: BinaryOp -> Maybe (Typed Operand -> Typed Operand -> CodeGen (Typed Operand))
 tryMatchArithmetic ADD = Just addition
+tryMatchArithmetic SUB = Just subtraction
 tryMatchArithmetic _   = Nothing

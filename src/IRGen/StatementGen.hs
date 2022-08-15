@@ -17,10 +17,11 @@ import           LLVM.Prelude               (sequenceA_, traverse_)
 import           Core.CompileResult         (ErrorType (UnexpectedError),
                                              throwError)
 import qualified Core.CompileResult         as Result
-import           Core.Types                 (Expr (..), Stmt (..))
+import           Core.Types                 (Expr (..), Stmt (..),
+                                             UnaryOp (NEG))
 import           Extras.FixedAnnotated      (FixedAnnotated (getValue))
 import           IRGen.Basics               (getVarValue, makeNewVar, toBool)
-import           IRGen.MixedFunctions       (tryMatchArithmetic,
+import           IRGen.MixedFunctions       (negation, tryMatchArithmetic,
                                              tryMatchComparison)
 import           IRGen.Types                (CodeGen,
                                              Mutability (Frozen, Mutable),
@@ -55,8 +56,7 @@ generateExpr (MaybeTyped maybeExprTy expr) = do
       (Typed ret f) <- typeCheckFunction func params_ops
 
       fmap (Typed ret) $ I.call f $ map ((,[]) . getValue) params_ops
-    helper _ = undefined -- FIXME: implement negation
-
+    helper (Unary NEG e) = generateExpr e >>= negation
 generateStmt :: Stmt MaybeTyped -> CodeGen ()
 generateStmt = \case
   LetMutStmt pos lv ex        -> withPosition pos $ do

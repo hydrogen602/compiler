@@ -1,15 +1,12 @@
 -- Print out the fibonacci numbers, computed with recursion
 def fib(n: i32) -> i32 {
     let mut out = 0
-    if 0 < n {
+    if n == 1 {
         out = 1
-
-        if n < 2 {
-
-        } else {
-            let n1 = n + -1
-            let n2 = n + -2
-            out = fib(n1) + fib(n2)
+    } 
+    else {
+        if n >= 2 {
+            out = fib(n - 1) + fib(n - 2)
         }
     }
     return out
