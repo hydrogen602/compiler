@@ -2,12 +2,10 @@
 
 module Core.Literals (ToLiteral(..), Literals2(..), ConstValue(..), Consts(..), ConstName(..), addLiteral2, singletonLiteral2) where
 
-import qualified Data.Map        as Map
-import qualified Data.Set        as Set
-import           Numeric.Natural (Natural)
+import qualified Data.Map     as Map
+import qualified Data.Set     as Set
 
-import           Core.Classes    (Empty (..), Nameable (..))
-import           Core.Util       (ddot)
+import           Core.Classes (Empty (..), Nameable (..))
 
 newtype ConstName = ConstName {getConstName :: String} deriving (Show, Eq, Ord)
 

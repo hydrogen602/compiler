@@ -63,9 +63,9 @@ deriving instance (Eq (f (Expr f))) => Eq (Stmt f)
 
 -- lets do preorder?
 foldStmtr :: (Stmt f -> a -> a) -> a -> Stmt f -> a
-foldStmtr f init stmt = aFinal
+foldStmtr f initial stmt = aFinal
   where
-    a = f stmt init
+    a = f stmt initial
     aFinal = case stmt of
       IfStmt _ stmts1 stmts2 ->
         let a1 = foldr f a stmts1

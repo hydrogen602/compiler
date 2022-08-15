@@ -30,8 +30,8 @@ ${EXE_NAME}: ${SRCS} ${GENERATED} ${LIB} test_basic.idk
 ${LIB}:
 	$(MAKE) -C libc
 
-# build: ${SRCS} ${GENERATED}
-# 	cabal build exe:compiler
+build: ${SRCS} ${GENERATED} ${LIB}
+	cabal build exe:compiler
 
 src/Lexer.hs: Lexer.x
 	alex Lexer.x --outfile=$@
