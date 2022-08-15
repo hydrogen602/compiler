@@ -2,7 +2,6 @@ module IRGen.MixedFunctions where
 
 import           LLVM.AST                   (Operand (ConstantOperand))
 import qualified LLVM.AST.Constant          as C
-import qualified LLVM.IRBuilder             as Module
 import qualified LLVM.IRBuilder.Instruction as I
 import           Prelude                    hiding (EQ)
 

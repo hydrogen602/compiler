@@ -9,8 +9,6 @@ export LDFLAGS := -L/opt/homebrew/opt/llvm@11/lib
 export CPPFLAGS := -I/usr/homebrew/opt/llvm@11/include
 SHELL := env PATH=$(PATH) /bin/bash
 
-LIB = libc/libc.a
-
 # Configs
 BUILD_DIR = build
 EXE_NAME = ${BUILD_DIR}/main
@@ -22,15 +20,12 @@ run: ${EXE_NAME}
 
 # Note: changing code to produce an executable and then trying to link it is dumb
 
-${EXE_NAME}: ${SRCS} ${GENERATED} ${LIB} test_basic.idk
+${EXE_NAME}: ${SRCS} ${GENERATED} test_basic.idk
 	cabal run exe:compiler -- -i test_basic.idk -o $@
 
 # Haskell building & other setup
 
-${LIB}:
-	$(MAKE) -C libc
-
-build: ${SRCS} ${GENERATED} ${LIB}
+build: ${SRCS} ${GENERATED}
 	cabal build exe:compiler
 
 src/Lexer.hs: Lexer.x

@@ -78,7 +78,8 @@ compileToObj clangPath text file =
   runCommandWithInput clangPath text ["-Wno-override-module", "-c", "-o", file, "-x", "ir", "-"]
 
 compileToExe :: FilePath -> T.Text -> FilePath -> IO ()
-compileToExe clangPath text file =
+compileToExe clangPath text file = do
+  compileLib
   runCommandWithInput clangPath text ["-Wno-override-module", "-o", file, "libc/libc.a", "-x", "ir", "-"]
 
 runCommandWithInput :: FilePath -> T.Text -> [String] -> IO ()
@@ -96,3 +97,12 @@ runCommandWithInput command text args = do
     ExitSuccess   -> pure ()
     ExitFailure n -> error "clang compilation failed"
 
+compileLib :: IO ()
+compileLib = do
+  let pConfig = proc "make" ["-C", "libc", "libc.a"]
+
+  (stdin, stdout, stderr, process) <- createProcess pConfig
+  result <- waitForProcess process
+  case result of
+    ExitSuccess   -> pure ()
+    ExitFailure n -> error "library compilation failed"
