@@ -19,4 +19,8 @@ println(f(y))
 
 println(- (10+12))
 
+let d = 5
+
+println(if d < 4 { 1 } else { 2 })
+
 return 0

@@ -15,6 +15,7 @@ import           IRGen.Types                (CodeGen, Mutability (..),
                                              Variable (Variable), addVariable,
                                              lookupType, lookupVariable)
 import           Types.Addon                (Typed (..), isType)
+import           Types.Core                 (AType)
 import qualified Types.Core                 as Ty
 
 
@@ -27,11 +28,21 @@ makeNewVar :: Mutability -> Typed Operand -> LocalVariable -> CodeGen (Typed Ope
 makeNewVar Frozen var lv =
   addVariable lv (Variable Frozen var) $> var
 makeNewVar Mutable (Typed ty op) lv = do
-  llvmType <- lookupType ty
-  var <- Typed ty <$> I.alloca llvmType Nothing 0
+  var <- createRawMutableVariable ty
   addVariable lv (Variable Mutable var)
-  I.store (getValue var) 0 op
+  rawStoreInstruction (getValue var) op
   pure var
+
+
+createRawMutableVariable :: AType -> CodeGen (Typed Operand)
+createRawMutableVariable ty = do
+  llvmType <- lookupType ty
+  Typed ty <$> I.alloca llvmType Nothing 0
+
+-- | Gets a mutable variable (pointer) and a value,
+-- and stores the value in the variable
+rawStoreInstruction :: Operand -> Operand -> CodeGen ()
+rawStoreInstruction = flip I.store 0
 
 
 getVarValue :: LocalVariable -> CodeGen (Typed Operand)

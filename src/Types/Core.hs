@@ -121,7 +121,3 @@ builtinTypes = fromList [
   (boolPtr, T.ptr T.i1),
   (arrayList, T.StructureType False [T.i32, T.i32, T.ptr T.i32])
   ]
-
-
-
-

@@ -51,10 +51,9 @@ data Stmt f =
     LetStmt Pos LocalVariable (f (Expr f))
   | LetMutStmt Pos LocalVariable (f (Expr f))
   | AssignStmt Pos LocalVariable (f (Expr f))
-  | FuncCall FunctionName [f (Expr f)]
-  | IfStmt (f (Expr f)) [Stmt f] [Stmt f]
   | WhileStmt (f (Expr f)) [Stmt f]
   | ReturnStmt (f (Expr f))
+  | ExprStmt (f (Expr f))
   -- deriving (Eq, Ord)
 
 deriving instance (Show (f (Expr f)), Show (f (Stmt f))) => Show (Stmt f)
@@ -67,11 +66,8 @@ foldStmtr f initial stmt = aFinal
   where
     a = f stmt initial
     aFinal = case stmt of
-      IfStmt _ stmts1 stmts2 ->
-        let a1 = foldr f a stmts1
-        in foldr f a1 stmts2
-      WhileStmt _ stmts      -> foldr f a stmts
-      _                      -> a
+      WhileStmt _ stmts -> foldr f a stmts
+      _                 -> a
 
 foldStmtMap :: Monoid a => (Stmt f -> a) -> Stmt f -> a
 foldStmtMap f = foldStmtr (flip (<>) . f) mempty
@@ -97,9 +93,10 @@ data Expr f =
   Immediate Int |
   Expr BinaryOp (f (Expr f)) (f (Expr f)) |
   Unary UnaryOp (f (Expr f)) |
-  FuncExpr FunctionName [f (Expr f)]
+  FuncExpr FunctionName [f (Expr f)] |
+  IfExpr Pos (f (Expr f)) [Stmt f] [Stmt f]
 
-deriving instance Show (f (Expr f)) => Show (Expr f)
+deriving instance (Show (f (Stmt f)), Show (f (Expr f))) => Show (Expr f)
 deriving instance Ord (f (Expr f)) => Ord (Expr f)
 deriving instance Eq (f (Expr f)) => Eq (Expr f)
 

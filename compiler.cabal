@@ -54,6 +54,7 @@ library
         IRGen.Lib
         Types.Addon
         Types.Core
+        Types.Consts
         Compat.Control.Monad.Error.Class
     exposed-modules:
         Token

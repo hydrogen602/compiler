@@ -17,3 +17,7 @@ strictZip _ _               = Nothing
 -- FIXME: use MonadError instead of partial function
 strictZip' :: [a] -> [b] -> [(a,b)]
 strictZip' = fromMaybe (error "Internal Error: strictZip'") `ddot` strictZip
+
+safeLast :: [a] -> Maybe a
+safeLast [] = Nothing
+safeLast ls = Just $ last ls

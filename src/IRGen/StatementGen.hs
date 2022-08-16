@@ -12,7 +12,7 @@ import           LLVM.AST                   hiding (Function, FunctionType,
 import qualified LLVM.AST.Constant          as C
 import qualified LLVM.IRBuilder             as Module
 import qualified LLVM.IRBuilder.Instruction as I
-import           LLVM.Prelude               (sequenceA_, traverse_)
+import           LLVM.Prelude               (fromMaybe, sequenceA_, traverse_)
 
 import           Core.CompileResult         (ErrorType (UnexpectedError),
                                              throwError)
@@ -20,6 +20,7 @@ import qualified Core.CompileResult         as Result
 import           Core.Types                 (Expr (..), Stmt (..),
                                              UnaryOp (NEG))
 import           Extras.FixedAnnotated      (FixedAnnotated (getValue))
+import           Extras.Misc                (safeLast)
 import           IRGen.Basics               (getVarValue, makeNewVar, toBool)
 import           IRGen.MixedFunctions       (negation, tryMatchArithmetic,
                                              tryMatchComparison)
@@ -28,9 +29,11 @@ import           IRGen.Types                (CodeGen,
                                              lookupFunction,
                                              lookupVariableMutable,
                                              withNewScope, withPosition)
+import           LLVM.IRBuilder             (currentBlock)
 import           Types.Addon                (MaybeTyped (..), Typed (..),
-                                             typeCheck, typeCheck',
+                                             typeCheck, typeCheck', typeCheck2,
                                              typeCheckFunction)
+import qualified Types.Consts               as Co
 import qualified Types.Core                 as Ty
 
 
@@ -57,41 +60,47 @@ generateExpr (MaybeTyped maybeExprTy expr) = do
 
       fmap (Typed ret) $ I.call f $ map ((,[]) . getValue) params_ops
     helper (Unary NEG e) = generateExpr e >>= negation
-generateStmt :: Stmt MaybeTyped -> CodeGen ()
+    helper (IfExpr pos ex sts_then sts_else) = withPosition pos $ mdo
+      cond <- generateExpr ex
+      b <- toBool cond
+
+      Module.condBr (getValue b) then_block else_block
+
+      then_block <- Module.block `Module.named` "then"
+      op_if <- fromMaybe Co.unit . safeLast <$> withNewScope (traverse generateStmt sts_then)
+      then_block_final <- currentBlock
+      checkForExit $ Module.br merge_block
+
+      else_block <- Module.block `Module.named` "else"
+      op_else <- fromMaybe Co.unit . safeLast <$> withNewScope (traverse generateStmt sts_else)
+      else_block_final <- currentBlock
+      checkForExit $ Module.br merge_block
+
+      merge_block <- Module.block `Module.named` "merge"
+
+      finalType <- typeCheck2 op_if op_else
+
+      if finalType == Ty.unit then
+        pure Co.unit
+      else
+        Typed finalType <$> I.phi [(getValue op_if, then_block_final), (getValue op_else, else_block_final)]
+
+
+generateStmt :: Stmt MaybeTyped -> CodeGen (Typed Operand)
 generateStmt = \case
   LetMutStmt pos lv ex        -> withPosition pos $ do
     val <- generateExpr ex
     -- see https://llvm.org/docs/LangRef.html#store-instruction
-    void $ makeNewVar Mutable val lv
+    Co.voidUnit $ makeNewVar Mutable val lv
   LetStmt pos lv ex           -> withPosition pos $ do
     val <- generateExpr ex
-    void $ makeNewVar Frozen val lv
+    Co.voidUnit $ makeNewVar Frozen val lv
   AssignStmt pos lv ex        -> withPosition pos $ do
     var <- lookupVariableMutable lv
     pre_val <- generateExpr ex
     val <- typeCheck (type_ var) pre_val
     I.store (getValue var) 0 (getValue val)
-  FuncCall f_name exs        -> do
-    func <- lookupFunction f_name
-    params_ops <- traverse generateExpr exs
-    (Typed _ f) <- typeCheckFunction func params_ops
-    void $ I.call f $ map ((,[]) . getValue) params_ops
-  IfStmt ex sts_then sts_else -> mdo
-    cond <- generateExpr ex
-    b <- toBool cond
-
-    Module.condBr (getValue b) then_block else_block
-
-    then_block <- Module.block `Module.named` "then"
-    withNewScope $ traverse_ generateStmt sts_then
-    checkForExit $ Module.br merge_block
-
-    else_block <- Module.block `Module.named` "else"
-    withNewScope $ traverse_ generateStmt sts_else
-    checkForExit $ Module.br merge_block
-
-    merge_block <- Module.block `Module.named` "merge"
-    pure ()
+    pure Co.unit
   WhileStmt ex sts       -> mdo
     Module.br cond_block
     cond_block <- Module.block `Module.named` "while_condition"
@@ -105,10 +114,13 @@ generateStmt = \case
     Module.br cond_block
 
     break_block <- Module.block `Module.named` "while_break"
-    pure ()
+    pure Co.unit
   ReturnStmt ex          -> do
     val <- generateExpr ex
     sequenceA_ $ I.ret <$> val
+    pure Co.unit
+  ExprStmt ex -> do
+    generateExpr ex
 
 
 checkForExit :: CodeGen () -> CodeGen ()

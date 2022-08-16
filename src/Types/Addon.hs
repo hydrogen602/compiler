@@ -70,6 +70,14 @@ typeCheck' (Just aType) typed
   where
     ty = getAnnotation typed
 
+typeCheck2 :: MonadError ResultFailed m => Typed a -> Typed a -> m AType
+typeCheck2 (Typed t1 _) (Typed t2 _)
+  | t1 == t2 = pure t1
+  | otherwise = throwTypeError t1 t2
+
+areTypesMatching :: Typed a -> Typed a -> Bool
+areTypesMatching (Typed t1 _) (Typed t2 _) = t1 == t2
+
 -- returns the function + the return type
 typeCheckFunction :: MonadError ResultFailed m => Typed f -> [Typed a] -> m (Typed f)
 typeCheckFunction (Typed (FunctionType args ret) f) parameters = do

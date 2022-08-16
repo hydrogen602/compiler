@@ -1,9 +1,7 @@
 {
 module Grammar (parser, Stmt(..), Expr(..)) where
 
-import Data.Char
-import qualified Data.Map.Strict as Map
-import Debug.Trace
+import Data.List (intercalate)
 
 import Lexer
 import Token
@@ -19,12 +17,13 @@ import Extras.Position (Pos(Pos))
 %name calc
 %tokentype { WithPosition }
 %error { parseError }
+%errorhandlertype explist
 
 %token 
       let             { WithPosition $$ Let }
       mut             { WithPosition $$ Mut }
       const           { WithPosition _ Const }
-      if              { WithPosition _ If }
+      if              { WithPosition $$ If }
       else            { WithPosition _ Else }
       while           { WithPosition _ While }
       int             { WithPosition _ (Integer $$) }
@@ -98,21 +97,22 @@ Args2   :: { [MaybeTyped (Expr MaybeTyped)] }
 
 
 Block   : Stmt '\n' Block                          { ($1):($3) }
+        | Stmt                                     { [$1] }
         | {- Empty -}                              { [] }
 
 Stmt    :: { Stmt MaybeTyped }
         : let mut var '=' Expr                     { LetMutStmt (toPos $1) (LocalVariable $3) $5 }
         | let var '=' Expr                         { LetStmt (toPos $1) (LocalVariable $2) $4 }
         | var '=' Expr                             { AssignStmt (toPos $2) (LocalVariable $1) $3 }
-        | if Expr '{' Block '}' ElseP              { IfStmt $2 $4 $6 }
         | while Expr '{' Block '}'                 { WhileStmt $2 $4 }
-        | var '(' Args ')'                         { FuncCall (FunctionName $1) $3 }
+        | Expr                                     { ExprStmt $1 }
 
 ElseP   : else '{' Block '}'                       { $3 }
         | {- Empty -}                              { [] }
 
 Expr    :: { MaybeTyped (Expr MaybeTyped) }
-        : Expr '+' Expr                            { noType (Expr ADD $1 $3) }
+        : if Expr '{' Block '}' ElseP              { noType (IfExpr (toPos $1) $2 $4 $6) }
+        | Expr '+' Expr                            { noType (Expr ADD $1 $3) }
         | Expr '-' Expr                            { noType (Expr SUB $1 $3) }
         | Expr '<' Expr                            { noType (Expr LESS_THAN $1 $3) }
         | Expr '>' Expr                            { noType (Expr GREATER_THAN $1 $3) }
@@ -140,8 +140,10 @@ toPos = uncurry Pos . getLineColPair
 noType :: a -> MaybeTyped a
 noType = MaybeTyped Nothing
 
-parseError :: [WithPosition] -> a
-parseError tok = error $ "Parse error " ++ show tok
+parseError :: ([WithPosition], [String]) -> a
+parseError (tok, possible) = error $ "Parse error\n" ++ show tok ++ "\n\nExpected one of: " ++ p
+  where
+    p = intercalate ", " possible
 
 parser :: String -> AST MaybeTyped
 parser = calc . lexThis

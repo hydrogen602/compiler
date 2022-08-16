@@ -17,6 +17,7 @@ tokens :-
   \n$white*             { helper' NewLine }
   $white+				        ;
   "--".*\n*				      ;
+  "/*"(.|\n)*"*/"        ;
   let  	                { helper' Let }
   mut                   { helper' Mut }
   const                 { helper' Const }
@@ -49,7 +50,10 @@ tokens :-
 data WithPosition = WithPosition {
   pos   :: AlexPosn,
   token :: Token
-  } deriving (Show, Eq)
+  } deriving Eq
+
+instance Show WithPosition where
+  show (WithPosition (AlexPn _ line col) tok) = "(line: " ++ show line ++ ", col: " ++ show col ++ ") " ++ show tok
 
 getLineColPair :: AlexPosn -> (Int, Int)
 getLineColPair (AlexPn _ line col) = (line,col)
