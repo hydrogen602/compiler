@@ -22,7 +22,7 @@ data ASTFunction f = ASTFunction {
 
 type Constant f = Either (ConstName, ConstValue) (ASTFunction f)
 
--- Parse Helpers
+-- ** Parse Helpers
 
 startHelper :: Constant f -> AST f -> AST f
 startHelper c ast@AST{consts=cs} =
@@ -31,7 +31,7 @@ startHelper c ast@AST{consts=cs} =
 fromStmts :: [Stmt f] -> AST f
 fromStmts = AST []
 
--- Other
+-- ** Other
 
 getLiteralsFromStmts :: [Stmt f] -> Literals2
 getLiteralsFromStmts = foldMap $ foldStmtMap getConstFromStmt

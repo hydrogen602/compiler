@@ -4,7 +4,7 @@
 
 module Extras.FixedAnnotated where
 
-import           Control.Arrow (second, (&&&))
+import           Control.Arrow ((&&&))
 
 firstJust :: Maybe a -> Maybe a -> Maybe a
 firstJust (Just a) _ = Just a
@@ -19,14 +19,3 @@ class FixedAnnotated a b | a -> b where -- b c | a -> b c where
   toPair = getAnnotation &&& getValue
 
   fromPair :: b -> c -> a c
-
-instance {-# OVERLAPPABLE #-} FixedAnnotated a b => Functor a where
-  fmap f = uncurry fromPair . second f . toPair
-
-instance {-# OVERLAPPABLE #-} FixedAnnotated a b => Foldable a where
-  foldMap f = f . getValue
-
-instance {-# OVERLAPPABLE #-} (Foldable a, Functor a, FixedAnnotated a b) => Traversable a where
-  traverse f ta = fromPair annotation <$> value
-    where
-      (annotation, value) = second f $ toPair ta

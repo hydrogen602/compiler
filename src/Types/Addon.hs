@@ -23,7 +23,7 @@ import           Types.Core
 data MaybeTyped a = MaybeTyped {
   type_'   :: Maybe AType,
   operand' :: a
-} deriving (Show, Eq, Ord, Traversable)
+} deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
 instance PrettyShow (MaybeTyped Operand) where
   pshow (MaybeTyped (Just ty) _) = "operand: " ++ pshow ty
@@ -38,7 +38,7 @@ instance FixedAnnotated MaybeTyped (Maybe AType) where
 data Typed a = Typed {
   type_   :: AType,
   operand :: a
-} deriving (Show, Eq, Ord, Traversable)
+} deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
 instance PrettyShow (Typed Operand) where
   pshow (Typed ty _) = "operand: " ++ pshow ty

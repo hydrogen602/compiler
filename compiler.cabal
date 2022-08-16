@@ -9,10 +9,10 @@ synopsis: A LLVM-based compiler for a low-level functional-ish language with C i
 -- description:
 
 -- A URL where users can report bugs.
--- bug-reports:
+bug-reports:        https://github.com/hydrogen602/compiler/issues
 
 -- The license under which the package is released.
--- license:
+license:            MIT
 author:             hydrogen602
 maintainer:         hydrogen31415@gmail.com
 
