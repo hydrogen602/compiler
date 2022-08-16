@@ -14,7 +14,8 @@ import           Extras.FixedAnnotated      (FixedAnnotated (getValue))
 import           IRGen.Types                (CodeGen, Mutability (..),
                                              Variable (Variable), addVariable,
                                              lookupType, lookupVariable)
-import           Types.Addon                (Typed (..), isType)
+import           Types.Addon                (Typed (..))
+import           Types.Checkers             (isType)
 import           Types.Core                 (AType)
 import qualified Types.Core                 as Ty
 

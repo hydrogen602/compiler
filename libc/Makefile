@@ -1,5 +1,5 @@
 # C Flags
-CPPFLAGS = -Wall -pedantic
+CPPFLAGS = -Wall -pedantic -g
 CC = clang
 LDLIBS = -lm
 

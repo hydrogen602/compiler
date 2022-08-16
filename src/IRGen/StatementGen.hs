@@ -30,8 +30,8 @@ import           IRGen.Types                (CodeGen,
                                              lookupVariableMutable,
                                              withNewScope, withPosition)
 import           LLVM.IRBuilder             (currentBlock)
-import           Types.Addon                (MaybeTyped (..), Typed (..),
-                                             typeCheck, typeCheck', typeCheck2,
+import           Types.Addon                (MaybeTyped (..), Typed (..))
+import           Types.Checkers             (typeCheck, typeCheck', typeCheck2,
                                              typeCheckFunction)
 import qualified Types.Consts               as Co
 import qualified Types.Core                 as Ty
@@ -56,7 +56,7 @@ generateExpr (MaybeTyped maybeExprTy expr) = do
     helper (FuncExpr f_name parameters) = do
       func <- lookupFunction f_name
       params_ops <- traverse generateExpr parameters
-      (Typed ret f) <- typeCheckFunction func params_ops
+      (Typed ret f) <- typeCheckFunction func params_ops f_name
 
       fmap (Typed ret) $ I.call f $ map ((,[]) . getValue) params_ops
     helper (Unary NEG e) = generateExpr e >>= negation

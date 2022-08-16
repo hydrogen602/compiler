@@ -17,10 +17,11 @@ generateLib = do
       (Ty.FunctionType [Ty.i32] Ty.unit, "print"),
       (Ty.FunctionType [Ty.i32] Ty.unit, "println"),
 
-      (Ty.FunctionType [] Ty.arrayList, "newArrayList"),
-      (Ty.FunctionType [Ty.arrayList, Ty.i32] Ty.unit, "append"),
-      (Ty.FunctionType [Ty.arrayList] Ty.i32, "pop"),
-      (Ty.FunctionType [Ty.arrayList] Ty.i32, "len")
+      (Ty.FunctionType [] Ty.arrayList, "ArrayList"),
+      (Ty.FunctionType [Ty.arrayList] Ty.arrayList, "ArrayList_destroy"),
+      (Ty.FunctionType [Ty.arrayList, Ty.i32] Ty.unit, "ArrayList_append"),
+      (Ty.FunctionType [Ty.arrayList] Ty.i32, "ArrayList_pop"),
+      (Ty.FunctionType [Ty.arrayList] Ty.i32, "ArrayList_len")
       ]
 
   traverse_ (\(ftype@(Ty.FunctionType args out), f_name) -> do

@@ -23,4 +23,22 @@ let d = 5
 
 println(if d < 4 { 1 } else { 2 })
 
+let arr = ArrayList()
+
+println(ArrayList_len(arr))
+
+let mut i = 0
+while i < 5 {
+  ArrayList_append(arr, i)
+  i = i + 1
+}
+
+println(ArrayList_len(arr))
+
+while ArrayList_len(arr) > 0 {
+  println(ArrayList_pop(arr))
+}
+
+ArrayList_destroy(arr)
+
 return 0

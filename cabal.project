@@ -1,5 +1,5 @@
 
-documentation: true
+documentation: false
 haddock-internal: true
 haddock-hyperlink-source: true
 

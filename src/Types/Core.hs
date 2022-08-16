@@ -4,7 +4,6 @@
 module Types.Core where
 
 import qualified Data.Map.Strict           as Map
-import           Data.String               (IsString (fromString))
 import qualified LLVM.AST.Type             as T
 
 import           Control.Monad.Error.Class (MonadError)
@@ -17,11 +16,20 @@ import           Extras.PrettyShow
 
 data AType =
     TypeName { getTypeName :: String }
+  | HeapTypeName { getTypeName :: String }
   | FunctionType {
     arguments  :: [AType],
     returnType :: AType
   }
   deriving (Show, Eq, Ord) -- ToDo: Turn FunctionType into Kinds
+
+data Allocation = Stack | Heap | Static deriving (Show, Eq, Ord)
+
+-- | Get info on how this type is allocated
+getAllocationType :: AType -> Allocation
+getAllocationType (TypeName _)       = Stack
+getAllocationType (HeapTypeName _)   = Heap
+getAllocationType (FunctionType _ _) = Static
 
 throwTypeError :: MonadError ResultFailed m => AType -> AType -> m a
 throwTypeError expected actual = throwError TypeError $
@@ -29,15 +37,14 @@ throwTypeError expected actual = throwError TypeError $
 
 instance PrettyShow AType where
   pshow (TypeName n) = n
+  pshow (HeapTypeName n) = n
   pshow (FunctionType args ret) =
     "(" ++ intercalate ", " (map pshow args) ++ ") -> " ++ pshow ret
-
-instance IsString AType where
-  fromString = TypeName
 
 
 getContainedTypes :: AType -> [AType]
 getContainedTypes (TypeName _)            = []
+getContainedTypes (HeapTypeName _)        = []
 getContainedTypes (FunctionType args ret) = args ++ [ret]
 
 
@@ -108,7 +115,7 @@ i64Ptr = TypeName "*i64"
 boolPtr :: AType
 boolPtr = TypeName "*bool"
 arrayList :: AType
-arrayList = TypeName "list"
+arrayList = HeapTypeName "ArrayList"
 
 builtinTypes :: TypeTracker
 builtinTypes = fromList [
@@ -119,5 +126,5 @@ builtinTypes = fromList [
   (i32Ptr, T.ptr T.i32),
   (i64Ptr, T.ptr T.i64),
   (boolPtr, T.ptr T.i1),
-  (arrayList, T.StructureType False [T.i32, T.i32, T.ptr T.i32])
+  (arrayList, T.ptr $ T.StructureType False [T.i32, T.i32, T.ptr T.i32])
   ]

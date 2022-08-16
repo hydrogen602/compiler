@@ -1,4 +1,4 @@
-.PHONY: build xclean clean run docs
+.PHONY: build xclean clean run docs libc/libc.a
 
 SRCS = $(shell find src -type f -name '*.hs')
 
@@ -13,6 +13,8 @@ SHELL := env PATH=$(PATH) /bin/bash
 BUILD_DIR = build
 EXE_NAME = ${BUILD_DIR}/main
 
+LIB = libc/libc.a
+
 # Compiling
 
 run: ${EXE_NAME}
@@ -23,8 +25,11 @@ docs:
 
 # Note: changing code to produce an executable and then trying to link it is dumb
 
-${EXE_NAME}: ${SRCS} ${GENERATED} test_basic.idk
+${EXE_NAME}: ${SRCS} ${GENERATED} ${LIB} test_basic.idk
 	cabal run exe:compiler -- -i test_basic.idk -o $@
+
+${LIB}:
+	$(MAKE) -C libc
 
 # Haskell building & other setup
 
