@@ -1,4 +1,4 @@
-.PHONY: build xclean clean run
+.PHONY: build xclean clean run docs
 
 SRCS = $(shell find src -type f -name '*.hs')
 
@@ -17,6 +17,9 @@ EXE_NAME = ${BUILD_DIR}/main
 
 run: ${EXE_NAME}
 	@./${EXE_NAME}
+
+docs:
+	cabal haddock
 
 # Note: changing code to produce an executable and then trying to link it is dumb
 

@@ -6,7 +6,7 @@
 module IRGen.StatementGen where
 
 import           Control.Applicative        (Alternative ((<|>)))
-import           Control.Monad              (join, unless, void)
+import           Control.Monad              (join, unless)
 import           LLVM.AST                   hiding (Function, FunctionType,
                                              Instruction)
 import qualified LLVM.AST.Constant          as C

@@ -1,4 +1,9 @@
 
+documentation: true
+haddock-internal: true
+haddock-hyperlink-source: true
+
+
 extra-prog-path:
   /opt/homebrew/opt/llvm@11/bin
 packages: compiler.cabal
