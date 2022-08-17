@@ -15,8 +15,8 @@ import           Extras.PrettyShow
 
 
 data AType =
-    TypeName { getTypeName :: String }
-  | HeapTypeName { getTypeName :: String }
+    TypeName { getTypeName' :: String }
+  | HeapTypeName { getTypeName' :: String }
   | FunctionType {
     arguments  :: [AType],
     returnType :: AType
@@ -24,6 +24,11 @@ data AType =
   deriving (Show, Eq, Ord) -- ToDo: Turn FunctionType into Kinds
 
 data Allocation = Stack | Heap | Static deriving (Show, Eq, Ord)
+
+getTypeName :: AType -> Maybe String
+getTypeName (TypeName n)       = Just n
+getTypeName (HeapTypeName n)   = Just n
+getTypeName (FunctionType _ _) = Nothing
 
 -- | Get info on how this type is allocated
 getAllocationType :: AType -> Allocation

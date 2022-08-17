@@ -57,6 +57,7 @@ library
         Types.Checkers
         Types.Consts
         Compat.Control.Monad.Error.Class
+        Typeclass.FunctionNameResolve
     exposed-modules:
         Token
         Grammar

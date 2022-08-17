@@ -25,20 +25,20 @@ println(if d < 4 { 1 } else { 2 })
 
 let arr = ArrayList()
 
-println(ArrayList_len(arr))
+println(arr.len())
 
 let mut i = 0
 while i < 5 {
-  ArrayList_append(arr, i)
+  arr.append(i)
   i = i + 1
 }
 
-println(ArrayList_len(arr))
+println(arr.len())
 
-while ArrayList_len(arr) > 0 {
-  println(ArrayList_pop(arr))
+while arr.len() > 0 {
+  println(arr.pop())
 }
 
-ArrayList_destroy(arr)
+arr.destroy()
 
 return 0

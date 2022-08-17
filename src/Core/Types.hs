@@ -94,6 +94,7 @@ data Expr f =
   Expr BinaryOp (f (Expr f)) (f (Expr f)) |
   Unary UnaryOp (f (Expr f)) |
   FuncExpr FunctionName [f (Expr f)] |
+  DotFuncExpr FunctionName (f (Expr f)) [f (Expr f)] |
   IfExpr Pos (f (Expr f)) [Stmt f] [Stmt f]
 
 deriving instance (Show (f (Stmt f)), Show (f (Expr f))) => Show (Expr f)

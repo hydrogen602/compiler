@@ -5,36 +5,51 @@
 
 module IRGen.StatementGen where
 
-import           Control.Applicative        (Alternative ((<|>)))
-import           Control.Monad              (join, unless)
-import           LLVM.AST                   hiding (Function, FunctionType,
-                                             Instruction)
-import qualified LLVM.AST.Constant          as C
-import qualified LLVM.IRBuilder             as Module
-import qualified LLVM.IRBuilder.Instruction as I
-import           LLVM.Prelude               (fromMaybe, sequenceA_, traverse_)
+import           Control.Applicative           (Alternative ((<|>)))
+import           Control.Monad                 (join, unless)
+import           LLVM.AST                      hiding (Function, FunctionType,
+                                                Instruction)
+import qualified LLVM.AST.Constant             as C
+import qualified LLVM.IRBuilder                as Module
+import qualified LLVM.IRBuilder.Instruction    as I
+import           LLVM.Prelude                  (fromMaybe, sequenceA_,
+                                                traverse_)
 
-import           Core.CompileResult         (ErrorType (UnexpectedError),
-                                             throwError)
-import qualified Core.CompileResult         as Result
-import           Core.Types                 (Expr (..), Stmt (..),
-                                             UnaryOp (NEG))
-import           Extras.FixedAnnotated      (FixedAnnotated (getValue))
-import           Extras.Misc                (safeLast)
-import           IRGen.Basics               (getVarValue, makeNewVar, toBool)
-import           IRGen.MixedFunctions       (negation, tryMatchArithmetic,
-                                             tryMatchComparison)
-import           IRGen.Types                (CodeGen,
-                                             Mutability (Frozen, Mutable),
-                                             lookupFunction,
-                                             lookupVariableMutable,
-                                             withNewScope, withPosition)
-import           LLVM.IRBuilder             (currentBlock)
-import           Types.Addon                (MaybeTyped (..), Typed (..))
-import           Types.Checkers             (typeCheck, typeCheck', typeCheck2,
-                                             typeCheckFunction)
-import qualified Types.Consts               as Co
-import qualified Types.Core                 as Ty
+import           Core.CompileResult            (ErrorType (UnexpectedError),
+                                                throwError)
+import qualified Core.CompileResult            as Result
+import           Core.Types                    (Expr (..), FunctionName,
+                                                Stmt (..), UnaryOp (NEG))
+import           Extras.FixedAnnotated         (FixedAnnotated (getValue))
+import           Extras.Misc                   (safeLast)
+import           IRGen.Basics                  (getVarValue, makeNewVar, toBool)
+import           IRGen.MixedFunctions          (negation, tryMatchArithmetic,
+                                                tryMatchComparison)
+import           IRGen.Types                   (CodeGen,
+                                                Mutability (Frozen, Mutable),
+                                                lookupFunction,
+                                                lookupVariableMutable,
+                                                withNewScope, withPosition)
+import           LLVM.IRBuilder                (currentBlock)
+import           Typeclass.FunctionNameResolve (getDotFunctionName)
+import           Types.Addon                   (MaybeTyped (..), Typed (..))
+import           Types.Checkers                (typeCheck, typeCheck',
+                                                typeCheck2, typeCheckFunction)
+import qualified Types.Consts                  as Co
+import qualified Types.Core                    as Ty
+
+
+generateFunctionCall :: FunctionName
+  -> [MaybeTyped (Expr MaybeTyped)]
+  -> Maybe (Typed Operand)
+  -> CodeGen (Typed Operand)
+generateFunctionCall fName parameters mFirst = do
+  func <- lookupFunction fName
+  params_ops <- traverse generateExpr parameters
+  let add_ops = maybe id (:) mFirst
+
+  (Typed ret f) <- typeCheckFunction func (add_ops params_ops) fName
+  fmap (Typed ret) $ I.call f $ map ((,[]) . getValue) (add_ops params_ops)
 
 
 generateExpr :: MaybeTyped (Expr MaybeTyped) -> CodeGen (Typed Operand)
@@ -53,12 +68,12 @@ generateExpr (MaybeTyped maybeExprTy expr) = do
         asOperand1 = generateExpr e1
         asOperand2 = generateExpr e2
 
-    helper (FuncExpr f_name parameters) = do
-      func <- lookupFunction f_name
-      params_ops <- traverse generateExpr parameters
-      (Typed ret f) <- typeCheckFunction func params_ops f_name
-
-      fmap (Typed ret) $ I.call f $ map ((,[]) . getValue) params_ops
+    helper (FuncExpr fName parameters) = do
+      generateFunctionCall fName parameters Nothing
+    helper (DotFuncExpr fName calledOn parameters) = do
+      calledOnExpr <- generateExpr calledOn
+      finalFuncName <- getDotFunctionName (type_ calledOnExpr) fName
+      generateFunctionCall finalFuncName parameters $ Just calledOnExpr
     helper (Unary NEG e) = generateExpr e >>= negation
     helper (IfExpr pos ex sts_then sts_else) = withPosition pos $ mdo
       cond <- generateExpr ex

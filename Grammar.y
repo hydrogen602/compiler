@@ -42,6 +42,7 @@ import Extras.Position (Pos(Pos))
       '{'             { WithPosition _ LCurly }
       '}'             { WithPosition _ RCurly }
       ','             { WithPosition _ Comma }
+      '.'             { WithPosition _ Dot }
       ':'             { WithPosition _ Colon }
 
       '-'             { WithPosition _ Minus }
@@ -62,6 +63,7 @@ import Extras.Position (Pos(Pos))
 %left '+' '-'
 %left '*' '/' '%'
 %left NEG
+%left '.'
 
 
 %%
@@ -126,6 +128,7 @@ Expr    :: { MaybeTyped (Expr MaybeTyped) }
         | '-' Expr %prec NEG                       { noType (Unary NEG $2) }
         | Value                                    { noType ($1) }
         | var '(' Args ')'                         { noType (FuncExpr (FunctionName $1) $3) }
+        | Expr '.' var '(' Args ')'                { noType (DotFuncExpr (FunctionName $3) $1 $5) }
         | '(' Expr ')'                             { ($2) }
 
 Value   : var                                      { Variabl (LocalVariable $1) }

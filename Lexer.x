@@ -38,6 +38,7 @@ tokens :-
   \}                    { helper' RCurly }
   \=                    { helper' Equals }
   \,                    { helper' Comma }
+  \.                    { helper' Dot }
   \:                    { helper' Colon }
   \-\>                  { helper' RightArrow }
   \-                    { helper' Minus }
