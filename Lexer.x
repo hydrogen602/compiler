@@ -26,8 +26,8 @@ tokens :-
   while                 { helper' While }
   def                   { helper' Def }
   $digit+				        { helper  (Integer . read) }
-  true                  { helper' (Integer 1) }
-  false                 { helper' (Integer 0) }
+  true                  { helper' TrueTok }
+  false                 { helper' FalseTok }
   return                { helper' Return }
   \"[^\"]*\"            { helper  strHelper }
   \(                    { helper' LParens }

@@ -22,6 +22,8 @@ data Token =
   Colon       |
   Return      |
   Const       |
+  TrueTok     |
+  FalseTok    |
   RightArrow  |
   Sym BiOpSym |
   Minus       |

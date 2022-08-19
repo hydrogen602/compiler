@@ -52,6 +52,8 @@ generateExpr (MaybeTyped maybeExprTy expr) = do
   typeCheck' maybeExprTy expr_operand
   where
     helper :: Expr MaybeTyped -> CodeGen (Typed Operand)
+    helper (Boolean True)         = pure Co.true
+    helper (Boolean False)        = pure Co.false
     helper (Variabl name)         = getVarValue name
     helper (Immediate n)          =
       pure $ Typed Ty.i32 $ ConstantOperand $ C.Int 32 (fromIntegral n)

@@ -91,6 +91,7 @@ newProgram = Program mempty empty mempty
 data Expr f =
   Variabl LocalVariable |
   Immediate Int |
+  Boolean Bool |
   Expr BinaryOp (f (Expr f)) (f (Expr f)) |
   Unary UnaryOp (f (Expr f)) |
   FuncExpr FunctionName [f (Expr f)] |

@@ -31,6 +31,8 @@ import Extras.Position (Pos(Pos))
       def             { WithPosition $$ Def }
       str             { WithPosition _ (Str $$) }
       return          { WithPosition _ Return }
+      true            { WithPosition _ TrueTok }
+      false           { WithPosition _ FalseTok }
       right_arrow     { WithPosition _ RightArrow }
 
       '\n'            { WithPosition _ NewLine }
@@ -126,6 +128,8 @@ Expr    :: { MaybeTyped (Expr MaybeTyped) }
         | Expr '*' Expr                            { noType (Expr PROD $1 $3) }
         | Expr '/' Expr                            { noType (Expr DIV $1 $3) }
         | '-' Expr %prec NEG                       { noType (Unary NEG $2) }
+        | true                                     { noType (Boolean True) }
+        | false                                    { noType (Boolean False) }
         | Value                                    { noType ($1) }
         | var '(' Args ')'                         { noType (FuncExpr (FunctionName $1) $3) }
         | Expr '.' var '(' Args ')'                { noType (DotFuncExpr (FunctionName $3) $1 $5) }
