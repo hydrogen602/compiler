@@ -58,6 +58,7 @@ library
         Types.Consts
         Compat.Control.Monad.Error.Class
         Typeclass.FunctionNameResolve
+        Typeclass.Builtin
     exposed-modules:
         Token
         Grammar

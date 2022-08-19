@@ -6,6 +6,7 @@
         "mappend",
         "mempty",
         "println",
+        "pshow",
         "syscall"
     ],
     "python.testing.pytestArgs": [

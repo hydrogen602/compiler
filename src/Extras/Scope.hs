@@ -39,6 +39,28 @@ pushScope sc = empty{parent_scope=Just sc}
 popScope :: Scope k v -> Maybe (Scope k v)
 popScope = parent_scope
 
+newtype DroppedScopes k v = DroppedScopes { getDroppedScopes :: [Map.Map k v] } deriving (Show, Eq, Ord)
+
+instance Foldable (DroppedScopes k) where
+  foldMap f = foldMap (foldMap f) . getDroppedScopes
+instance Functor (DroppedScopes k) where
+  fmap f = DroppedScopes . fmap (fmap f) . getDroppedScopes
+instance Traversable (DroppedScopes k) where
+  traverse f = (fmap DroppedScopes . traverse (traverse f)) . getDroppedScopes
+
+
+-- | Collect the scopes from a scope to another scope
+-- This is useful for figuring out what variables got dropped
+collectDroppedScopes :: (Eq k, Eq v) => Scope k v -> Scope k v -> DroppedScopes k v
+collectDroppedScopes scope until_scope
+  | scope == until_scope = DroppedScopes []
+  | otherwise = DroppedScopes (case parent of
+      Nothing -> [map_this_scope]
+      Just sc -> map_this_scope:getDroppedScopes (collectDroppedScopes sc until_scope))
+  where
+    parent = popScope scope
+    map_this_scope = values scope
+
 -- with ExceptT error handling system
 
 insertUnique :: (Show k, Ord k, MonadError ResultFailed m) => k -> v -> Scope k v -> m (Scope k v)

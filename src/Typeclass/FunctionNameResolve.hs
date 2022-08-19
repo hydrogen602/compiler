@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Typeclass.FunctionNameResolve where
+import           Data.Bifunctor            (Bifunctor (first), bimap)
 
 import           Control.Monad.Error.Class (MonadError)
 import           Core.CompileResult        (ErrorType (TypeError), ResultFailed,
@@ -19,5 +20,18 @@ getDotFunctionName ty (FunctionName fName) =
   where
     mTypeName = getTypeName ty
 
+-- | Attempts to do the opposite of getDotFunctionName
+-- ArrayList_len -> (ArrayList, len)
+breakApartFunctionName :: FunctionName -> Maybe (FunctionName, FunctionName)
+breakApartFunctionName (FunctionName fName) = bimap FunctionName FunctionName <$> splitOnLast fName '_'
 
+splitOnLast :: String -> Char -> Maybe (String, String)
+splitOnLast "" _ = Nothing
+splitOnLast (e:str) c
+  | e == c = case result of
+      Nothing    -> Just ([], str)
+      Just split -> Just $ first (e:) split
+  | otherwise = first (e:) <$> result
+  where
+    result = splitOnLast str c
 

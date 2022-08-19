@@ -41,13 +41,16 @@ data ProgramEnv = ProgramEnv {
   types  :: TC.TypeTracker
 }
 
-withNewScope :: MonadState ProgramEnv m => m a -> m a
+withNewScope :: MonadState ProgramEnv m => m a -> m (Scope.DroppedScopes LocalVariable Variable, a)
 withNewScope actionInScope = do
   this_scope <- gets locals
   modify (\program -> program{locals=Scope.pushScope $ locals program})
   a <- actionInScope
+  final_scope <- gets locals
   modify (\program -> program{locals=this_scope})
-  pure a
+  let
+    dropped = Scope.collectDroppedScopes final_scope this_scope
+  pure (dropped, a)
 
 -- instance Empty ProgramEnv where
 --   empty = ProgramEnv mempty mempty empty mempty
@@ -56,9 +59,18 @@ newProgramEnv = ProgramEnv mempty mempty empty TC.newTypeTracker
 
 
 lookupType :: (MonadState ProgramEnv m, MonadError ResultFailed m) => AType -> m L.Type
-lookupType name = do
+lookupType name = fst <$> lookupType' name
+
+lookupType' :: (MonadState ProgramEnv m, MonadError ResultFailed m) => AType -> m (L.Type, TC.Allocation)
+lookupType' name = do
   ty <- gets types
   TC.get name ty
+
+
+-- lookupType' :: (MonadState ProgramEnv m, MonadError ResultFailed m) => TypeLabel -> m L.Type
+-- lookupType' name = do
+--   ty <- gets types
+--   TC.get' name ty
 
 
 -- | Lookup a variable for reading, not writing
@@ -118,3 +130,8 @@ withPosition pos = withError (\e -> e{errLoc=Just pos})
 
 withFile :: MonadError ResultFailed m => FilePath -> m a -> m a
 withFile file = withError (\e -> e{errFile=Just file})
+
+
+-- | Get info on how this type is allocated
+getAllocationType :: (MonadError ResultFailed m, MonadState ProgramEnv m) => AType -> m TC.Allocation
+getAllocationType name = snd <$> lookupType' name

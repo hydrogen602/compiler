@@ -13,6 +13,9 @@ SHELL := env PATH=$(PATH) /bin/bash
 BUILD_DIR = build
 EXE_NAME = ${BUILD_DIR}/main
 
+# this adds debugging printf to track memory allocation/deallocation
+export MEM_DEBUG=1
+
 LIB = libc/libc.a
 
 # Compiling

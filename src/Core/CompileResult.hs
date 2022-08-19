@@ -6,19 +6,20 @@
 
 module Core.CompileResult where
 
-import           Control.Monad.Error.Class  (MonadError)
-import qualified Control.Monad.Error.Class  as MError
-import           Control.Monad.Identity     (Identity (Identity, runIdentity))
-import           Control.Monad.State        (State, evalState, runState, state,
-                                             withState)
-import           Control.Monad.State.Class  (gets, modify)
+import           Control.Monad.Error.Class        (MonadError)
+import qualified Control.Monad.Error.Class        as MError
+import           Control.Monad.Identity           (Identity (Identity, runIdentity))
+import           Control.Monad.State              (State, evalState, runState,
+                                                   state, withState)
+import           Control.Monad.State.Class        (gets, modify)
 import           Control.Monad.Trans.Except
-import           Data.Bifunctor             (Bifunctor (second))
-import           Data.Functor               ((<&>))
+import           Data.Bifunctor                   (Bifunctor (second))
 
-import           Core.Util                  (ddot)
-import           Extras.Position            (Pos (Pos))
-import           Extras.PrettyShow          (PrettyShow (pshow))
+import           Compat.Control.Monad.Error.Class (withError)
+import           Core.Util                        (ddot)
+import           Extras.Debug                     (red)
+import           Extras.Position                  (Pos (Pos))
+import           Extras.PrettyShow                (PrettyShow (pshow))
 
 data ResultFailed = ResultFailed {
     errFile :: Maybe FilePath,
@@ -55,21 +56,29 @@ data ErrorType =
   | InvalidVariableNameError
   | TypeError
   | ImmutableVariableError
+  | DirectCallToDestroyError
+  -- ^ if someone tries to call .destroy() directly. It gets called automatically upon going out of scope
   deriving (Show, Eq, Ord)
 
+-- | Adds a message to an error, useful for adding context to errors based on where they happen
+withContext :: MonadError ResultFailed m => String -> m a -> m a
+withContext context = withError (\e -> e{errMsg=errMsg e ++ "\n" ++ context})
+
+-- | Throws an error of type ResultFailed
 throwError :: MonadError ResultFailed m => ErrorType -> String -> m a
 throwError = MError.throwError `ddot` ResultFailed Nothing Nothing
 
 throwShowError :: (MonadError ResultFailed m, PrettyShow b) => ErrorType -> b -> m a
 throwShowError eType = MError.throwError . ResultFailed Nothing Nothing eType . pshow
 
--- catchAll :: Applicative m => ResultT m a -> ResultT m (Maybe a)
--- catchAll re = undefined -- catchE
-
-catch :: Monad m => ErrorType -> ResultT m a -> ResultT m (Maybe a)
-catch err re = ExceptT $ runExceptT re <&> \case
-  Left e  -> if errType e == err then Right Nothing else Left e
-  Right a -> Right $ Just a
+-- | Catches only a specific error
+catchError :: MonadError ResultFailed m => ErrorType -> m a -> m (Maybe a)
+catchError errToCatch ma = MError.catchError (Just <$> ma) $
+  \e@ResultFailed{errType=errT} ->
+    if errT == errToCatch then
+      pure Nothing
+    else
+      MError.throwError e
 
 -- ResultT manipulation helpers
 
@@ -87,7 +96,7 @@ mapInnerMonad f = ExceptT . f . runExceptT
 
 fromSuccess :: Monad m => ResultT m a -> m a
 fromSuccess r = runExceptT r >>= \case
-    Left rf -> error $ pshow rf
+    Left rf -> error $ red $ pshow rf
     Right a -> pure a
 
 

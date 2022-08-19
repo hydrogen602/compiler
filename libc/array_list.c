@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "mem.h"
+
 struct ArrayList {
   int32_t size;
   int32_t capacity;
@@ -11,7 +13,7 @@ struct ArrayList {
 typedef struct ArrayList *ArrayList_t;
 
 ArrayList_t ArrayList() {
-  ArrayList_t ptr = (ArrayList_t)malloc(sizeof(struct ArrayList));
+  ArrayList_t ptr = (ArrayList_t)malloc_rc(sizeof(struct ArrayList));
   ptr->size = 0;
   ptr->capacity = 0;
   ptr->data = NULL;
@@ -19,17 +21,15 @@ ArrayList_t ArrayList() {
 }
 
 void ArrayList_destroy(ArrayList_t arr) {
-  if (arr == NULL) {
-    fprintf(stderr, "WARN: Attempted double free");
-    return;
+  if (rc_decr((ref_count_ptr)arr) == NO_LONGER_IN_USE) {
+    arr->size = 0;
+    arr->capacity = 0;
+    if (arr->data != NULL) {
+      free(arr->data);
+    }
+    arr->data = NULL;
+    free_rc((ref_count_ptr)arr);
   }
-  arr->size = 0;
-  arr->capacity = 0;
-  if (arr->data != NULL) {
-    free(arr->data);
-  }
-  arr->data = NULL;
-  free(arr);
 }
 
 void ArrayList_append(ArrayList_t arr, int32_t val) {

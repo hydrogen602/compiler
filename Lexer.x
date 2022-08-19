@@ -14,10 +14,10 @@ $aw = [$white \n]
 
 tokens :-
 
-  \n$white*             { helper' NewLine }
+  $white*\n$white*             { helper' NewLine }
   $white+				        ;
   "--".*\n*				      ;
-  "/*"(.|\n)*"*/"        ;
+  "/*"(.|\n)*"*/"       ;
   let  	                { helper' Let }
   mut                   { helper' Mut }
   const                 { helper' Const }

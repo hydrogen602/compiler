@@ -20,10 +20,10 @@ import           Data.Foldable             (sequenceA_, traverse_)
 import           Extras.FixedAnnotated     (FixedAnnotated (getValue, toPair))
 import           Extras.Misc               (strictZip')
 import           IRGen.Basics              (makeNewVar, toLLVMName)
-import           IRGen.StatementGen        (generateStmt)
+import           IRGen.StatementGen        (generateStmt, withNewScopeAndDrop)
 import           IRGen.Types               (CodeGen, LLVM, Mutability (Frozen),
                                             ProgramEnv, addFunction, lookupType,
-                                            withNewScope, withPosition)
+                                            withPosition)
 import           Types.Addon               (MaybeTyped (..), Typed (..))
 import qualified Types.Core                as Ty
 
@@ -66,7 +66,7 @@ inputOutputTyping parameters ret = do
   pure (params_with_types, ret_llvm_type)
 
 generateFunctionBody :: [Stmt MaybeTyped] -> [Typed LocalVariable] -> [Operand] -> CodeGen ()
-generateFunctionBody code_ parameters param_ops = withNewScope $ do
+generateFunctionBody code_ parameters param_ops = withNewScopeAndDrop $ do
   _entry <- Module.block `Module.named` "entry"
   let params_pairs = zip parameters param_ops
   traverse_ (\(typed_name, op) -> do

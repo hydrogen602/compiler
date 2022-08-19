@@ -18,9 +18,8 @@ import           Core.CompileResult         (fromSuccess)
 import           Core.Types                 (Program (..))
 import           IRGen.FunctionGen          (generateAllFunctions)
 import           IRGen.Lib                  (generateLib)
-import           IRGen.StatementGen         (generateStmt)
-import           IRGen.Types                (LLVM, newProgramEnv, withFile,
-                                             withNewScope)
+import           IRGen.StatementGen         (generateStmt, withNewScopeAndDrop)
+import           IRGen.Types                (LLVM, newProgramEnv, withFile)
 import           Types.Addon                (MaybeTyped (..))
 
 
@@ -35,7 +34,7 @@ generateModule (Program func_mapping _ code' file) = evalState (fromSuccess resu
     funcs' = generateAllFunctions $ Map.elems func_mapping
 
     main :: LLVM Operand
-    main = withNewScope $ Module.function "main" [] Types.i32 $ \[] -> do
+    main = Module.function "main" [] Types.i32 $ \[] -> withNewScopeAndDrop $ do
       forM_ code' generateStmt
       I.ret $ ConstantOperand $ C.Int 32 0
 

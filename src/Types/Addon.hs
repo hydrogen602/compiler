@@ -6,12 +6,19 @@
 module Types.Addon where
 
 import           Control.Arrow         (Arrow (first))
+import           LLVM.AST.Operand      (Operand)
 
 import           Extras.FixedAnnotated
 import           Extras.PrettyShow     (PrettyShow (pshow))
-import           LLVM.AST.Operand      (Operand)
 import           Types.Core
 
+-- data ManuallyTyped a = ManuallyTyped {
+--   type_''   :: TypeLabel,
+--   operand'' :: a
+-- } deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
+
+-- instance PrettyShow (ManuallyTyped Operand) where
+--   pshow (ManuallyTyped ty _) = "operand: " ++ pshow ty
 
 data MaybeTyped a = MaybeTyped {
   type_'   :: Maybe AType,
