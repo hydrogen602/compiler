@@ -5,7 +5,7 @@
 
 typedef char *ref_count_ptr;
 
-typedef enum { IN_USE, NO_LONGER_IN_USE } rc_status_t;
+typedef enum { IN_USE = 0, NO_LONGER_IN_USE = 1 } rc_status_t;
 
 void mem_alloc_error();
 

@@ -21,7 +21,8 @@ generateLib = do
       (Ty.FunctionType [Ty.arrayList] Ty.arrayList, "ArrayList_destroy"),
       (Ty.FunctionType [Ty.arrayList, Ty.i32] Ty.unit, "ArrayList_append"),
       (Ty.FunctionType [Ty.arrayList] Ty.i32, "ArrayList_pop"),
-      (Ty.FunctionType [Ty.arrayList] Ty.i32, "ArrayList_len")
+      (Ty.FunctionType [Ty.arrayList] Ty.i32, "ArrayList_len"),
+      (Ty.FunctionType [Ty.arrayList] Ty.unit, "rc_incr")
       ]
 
   traverse_ (\(ftype@(Ty.FunctionType args out), f_name) -> do

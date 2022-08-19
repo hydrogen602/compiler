@@ -40,4 +40,7 @@ Every heap-allocated struct should also come with a function of the name TypeNam
   - When a value is passed to a function, i.e. `foo(x)`
   - When a value is being returned from a function, i.e. `return x`
   - When a value is being passed out of an if block, i.e. `if condition { x } else { y }`
+- Reference counting needs to be cleaned up - it should be that there is a boxed typeclass that automatically 
+  implements a method for incrementing and decrementing references - preferably inline - and a destroy method
+  the objects own cleanup
 

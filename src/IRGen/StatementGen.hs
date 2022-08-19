@@ -19,11 +19,12 @@ import           LLVM.Prelude                  (fromMaybe, sequenceA_,
 import           Core.CompileResult            (ErrorType (DirectCallToDestroyError, UnexpectedError),
                                                 throwError, withContext)
 import qualified Core.CompileResult            as Result
-import           Core.Types                    (Expr (..), FunctionName,
+import           Core.Types                    (Expr (..),
+                                                FunctionName (FunctionName),
                                                 LocalVariable, Stmt (..),
                                                 UnaryOp (NEG))
 import           Extras.FixedAnnotated         (FixedAnnotated (getValue))
-import           Extras.Misc                   (safeLast)
+import           Extras.Misc                   (getLast, makeLast, (<.>))
 import           Extras.Scope                  (DroppedScopes)
 import           IRGen.Basics                  (getVarValue, makeNewVar, toBool)
 import           IRGen.MixedFunctions          (negation, tryMatchArithmetic,
@@ -85,12 +86,24 @@ generateExpr (MaybeTyped maybeExprTy expr) = do
 
       then_block <- Module.block `Module.named` "then"
 
-      op_if <- fromMaybe Co.unit . safeLast <$> withNewScopeAndDrop (traverse generateStmt sts_then)
+      op_if <- withNewScopeAndDrop $ do
+        let
+          f = fromMaybe Co.unit . getLast . mconcat
+          ls = traverse (makeLast <.> generateStmt) sts_then
+        x <- f <$> ls
+        incrRefCountIfPossible x
+        pure x
       then_block_final <- currentBlock
       checkForExit $ Module.br merge_block
 
       else_block <- Module.block `Module.named` "else"
-      op_else <- fromMaybe Co.unit . safeLast <$> withNewScopeAndDrop (traverse generateStmt sts_else)
+      op_else <- withNewScopeAndDrop $ do
+        let
+          f = fromMaybe Co.unit . getLast . mconcat
+          ls = traverse (makeLast <.> generateStmt) sts_else
+        x <- f <$> ls
+        incrRefCountIfPossible x
+        pure x
       else_block_final <- currentBlock
       checkForExit $ Module.br merge_block
 
@@ -109,15 +122,17 @@ generateStmt = \case
   LetMutStmt pos lv ex        -> withPosition pos $ do
     val <- generateExpr ex
     -- see https://llvm.org/docs/LangRef.html#store-instruction
-    Co.voidUnit $ makeNewVar Mutable val lv
+    void $ makeNewVar Mutable val lv
+    Co.voidUnit $ incrRefCountIfPossible val -- val and the var should point to the same object
   LetStmt pos lv ex           -> withPosition pos $ do
     val <- generateExpr ex
-    Co.voidUnit $ makeNewVar Frozen val lv
+    void $ makeNewVar Frozen val lv
+    Co.voidUnit $ incrRefCountIfPossible val
   AssignStmt pos lv ex        -> withPosition pos $ do
     var <- lookupVariableMutable lv
-    pre_val <- generateExpr ex
-    val <- typeCheck (type_ var) pre_val
+    val <- typeCheck (type_ var) =<< generateExpr ex
     I.store (getValue var) 0 (getValue val)
+    void $ incrRefCountIfPossible val -- val and the var should point to the same object
     pure Co.unit
   WhileStmt ex sts       -> mdo
     Module.br cond_block
@@ -135,6 +150,7 @@ generateStmt = \case
     pure Co.unit
   ReturnStmt ex          -> do
     val <- generateExpr ex
+    void $ incrRefCountIfPossible val -- make sure to increment before the return
     sequenceA_ $ I.ret <$> val
     pure Co.unit
   ExprStmt ex -> do
@@ -168,6 +184,16 @@ dropVarIfPossible typedOp = do
     Heap -> withContext "Boxed types need to have a .destroy() function" $ do
       fn <- getDotFunctionName (type_ typedOp) destroy
       void $ generateFunctionCall fn [] (Just typedOp)
+    _    -> pure ()
+
+
+-- | Tries to increment the reference counter if the variable is heap allocated
+incrRefCountIfPossible :: Typed Operand -> CodeGen ()
+incrRefCountIfPossible typedOp = do
+  allocType <- getAllocationType $ type_ typedOp
+  case allocType of
+    Heap -> do
+      void $ generateFunctionCall (FunctionName "rc_incr") [] (Just typedOp)
     _    -> pure ()
 
 

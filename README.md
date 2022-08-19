@@ -33,3 +33,6 @@ To run the automatic tests, run `pytest`. (This requires `python3` and `pytest`)
 ## ToDo List
 
 - [ ] Enums on the heap
+- [ ] Reference counting incrementing
+- [ ] Emit llvm instructions for incr/decr reference counts - function calls are slow
+- [ ] Make performance tests for benchmarking against C and past/future versions
